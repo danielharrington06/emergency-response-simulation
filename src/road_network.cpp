@@ -1,6 +1,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cstdint>
+#include <iostream>
 
 #include "../include/road_network.hpp"
 
@@ -71,5 +72,20 @@ public:
         }
 
         return count;
+    }
+
+    // debugging
+
+    void printNetwork() const {
+        for (int i = 0; i < nodes.size(); i++) {
+            std::cout << "Node " << i << ":\n";
+            std::cout << "\tLatitude: " << nodes.at(i).latitude << '\n';
+            std::cout << "\tLongitude: " << nodes.at(i).longitude << '\n';
+            std::cout << "\tEdges:";
+            for (RoadEdge edge : adjacency.at(i)) {
+                std::cout << "\t\tDestination: Node " << edge.destination << "\t, Distance: " << edge.distance << "units\n";
+            }
+            std::cout << '\n';
+        }
     }
 };
