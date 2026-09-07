@@ -1,9 +1,10 @@
+#include "../include/road_network.hpp"
+
 #include <vector>
 #include <unordered_map>
 #include <cstdint>
 #include <iostream>
-
-#include "../include/road_network.hpp"
+#include <optional>
 
 class RoadNetwork {
 private:
@@ -15,13 +16,19 @@ private:
 public:
     // construction
 
-    void addNode(int64_t osmId, double latitude, double longitude) {
+    uint32_t addNode(int64_t osmId, double latitude, double longitude) {
         RoadNode node {
             .id = osmId,
             .latitude = latitude,
             .longitude = longitude
         };
+
+        uint32_t index = nodes.size();
         nodes.push_back(node);
+        osmToIndex[osmId] = index;
+        adjacency.emplace_back();
+
+        return index;
     }
 
     void addEdge(uint32_t source, const RoadEdge& edge) {
@@ -34,29 +41,22 @@ public:
         return nodes.at(index);
     }
 
-    const std::vector<RoadNode> getNeighbours(uint32_t index) {
-        std::vector<RoadNode> neighbours;
-
-        for (RoadEdge edge : adjacency.at(index)) {
-            neighbours.push_back(getNode(edge.destination));
-        }
-
-        return neighbours;
+    const std::vector<RoadNode>& getNodes() const {
+        return nodes;
     }
 
-    // OSM ID <-> internal index
+    const std::vector<RoadEdge>& getNeighbours(uint32_t index) const {
+        return adjacency.at(index);
+    }
 
-    uint32_t getNodeIndex(int64_t osmId) const {
-        try {
-            return osmToIndex.at(osmId);
-        }
-        catch (int error) {
-            return NULL;
-        }
+    // OSM ID to internal index
+
+    uint32_t  getNodeIndex(int64_t osmId) const { // would be nice to change this to optional
+        return osmToIndex.find(osmId);
     }
 
     bool containsNode(int64_t osmId) const {
-        return osmToIndex.find(osmId) == osmToIndex.end();
+        return osmToIndex.find(osmId) != osmToIndex.end();
     }
 
     // network information
@@ -65,9 +65,10 @@ public:
         return nodes.size();
     }
 
-    size_t edgeCount() const {
+    // returns the number of directed edges (so a two-way road is double counted)
+    size_t edgeCount() const { 
         size_t count = 0;
-        for (std::vector<RoadEdge> edges : adjacency) {
+        for (const std::vector<RoadEdge>& edges : adjacency) {
             count += edges.size();
         }
 
@@ -77,12 +78,12 @@ public:
     // debugging
 
     void printNetwork() const {
-        for (int i = 0; i < nodes.size(); i++) {
+        for (size_t i = 0; i < nodes.size(); i++) {
             std::cout << "Node " << i << ":\n";
             std::cout << "\tLatitude: " << nodes.at(i).latitude << '\n';
             std::cout << "\tLongitude: " << nodes.at(i).longitude << '\n';
             std::cout << "\tEdges:";
-            for (RoadEdge edge : adjacency.at(i)) {
+            for (const RoadEdge& edge : adjacency.at(i)) {
                 std::cout << "\t\tDestination: Node " << edge.destination << "\t, Distance: " << edge.distance << "units\n";
             }
             std::cout << '\n';
