@@ -7,6 +7,8 @@ clang++ -std=c++17 \
     src/road_network.cpp \
     src/test_network.cpp \
     src/router.cpp \
+    src/dispatch.cpp \
+    src/test_dispatch.cpp \
     -framework Metal \
     -framework Foundation \
     -o bin/main

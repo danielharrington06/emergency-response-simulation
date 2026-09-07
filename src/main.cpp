@@ -1,22 +1,22 @@
 #include "../include/test_network.hpp"
 #include "../include/router.hpp"
+#include "../include/test_dispatch.hpp"
 
 #include <iostream>
 
 int main() {
-    RoadNetwork network = createTestNetwork();
+    std::cout << "Emergency Response Simulation\n\n";
 
+    RoadNetwork network = createTestNetwork();
     std::cout << "Nodes: " << network.nodeCount() << '\n';
     std::cout << "Directed edges: " << network.edgeCount() << "\n\n";
     network.printNetwork();
+    std::cout << "\n";
 
-    Route route = findRoute(
-        network,
-        0,
-        3
-    );
-
-    route.printRoute();
+    Dispatch dispatch = createTestDispatch();
+    std::cout << "Vehicles: " << dispatch.vehicleCount() << '\n';
+    std::cout << "Incident: " << dispatch.incidentCount() << '\n';
+    dispatch.printDispatch();
 
     return 0;
 }

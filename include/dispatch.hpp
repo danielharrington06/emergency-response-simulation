@@ -20,10 +20,8 @@ public:
     const EmergencyVehicle& getVehicle(uint32_t id) const;
     const Incident& getIncident(uint32_t id) const;
 
-    size_t getIncidentCount() const;
-    size_t getVehicleCount() const;
+    size_t incidentCount() const;
+    size_t vehicleCount() const;
 
-    void printVehicles() const;
-    void printIncidents() const;
-    void printAssignments() const;
+    void printDispatch() const;
 };

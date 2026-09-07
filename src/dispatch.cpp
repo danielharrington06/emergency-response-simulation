@@ -36,11 +36,11 @@ const Incident& Dispatch::getIncident(uint32_t id) const {
     return incidents.at(id);
 }
 
-size_t Dispatch::getIncidentCount() const {
+size_t Dispatch::incidentCount() const {
     return incidents.size();
 }
 
-size_t Dispatch::getVehicleCount() const {
+size_t Dispatch::vehicleCount() const {
     return vehicles.size();
 }
 
@@ -67,7 +67,7 @@ std::string vehicleStatusToString(VehicleStatus status) {
     return "Unknown";
 }
 
-void Dispatch::printVehicles() const {
+void Dispatch::printDispatch() const {
     std::cout << "=== Vehicles ===\n\n";
     for (size_t i = 0; i < vehicles.size(); i++) {
         std::cout << "Vehicle " << i << ":\n";
@@ -79,10 +79,8 @@ void Dispatch::printVehicles() const {
             std::cout << "\tAssigned to: Incident " << vehicleAssignments.at(i);
         }
     }
-}
 
-void Dispatch::printIncidents() const {
-    std::cout << "=== Incidents ===\n\n";
+    std::cout << "\n\n=== Incidents ===\n\n";
     for (size_t i = 0; i < incidents.size(); i++) {
         std::cout << "Incident " << i << ":\n";
         std::cout << "\tLocation: Node " << incidents.at(i).location << '\n';
