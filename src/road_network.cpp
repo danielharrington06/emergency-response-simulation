@@ -52,7 +52,7 @@ public:
     // OSM ID to internal index
 
     uint32_t  getNodeIndex(int64_t osmId) const { // would be nice to change this to optional
-        return osmToIndex.find(osmId);
+        return osmToIndex.at(osmId);
     }
 
     bool containsNode(int64_t osmId) const {
@@ -84,7 +84,7 @@ public:
             std::cout << "\tLongitude: " << nodes.at(i).longitude << '\n';
             std::cout << "\tEdges:";
             for (const RoadEdge& edge : adjacency.at(i)) {
-                std::cout << "\t\tDestination: Node " << edge.destination << "\t, Distance: " << edge.distance << "units\n";
+                std::cout << "\t\tDestination: Node " << edge.destination << "\t, Distance: " << edge.distance << "units" << "\t, Speed Limit: " << edge.speedLimit << "units per hour\n";
             }
             std::cout << '\n';
         }

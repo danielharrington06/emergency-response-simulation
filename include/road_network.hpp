@@ -12,5 +12,5 @@ struct RoadNode {
 struct RoadEdge {
     std::uint32_t destination; // internal node index
     float distance;
-    float travelTime;
+    float speedLimit;
 };
