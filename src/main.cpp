@@ -12,8 +12,8 @@ int main() {
 
     Route route = findRoute(
         network,
-        4,
-        7
+        0,
+        3
     );
 
     route.printRoute();
