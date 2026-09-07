@@ -93,13 +93,13 @@ RoadNetwork createTestNetwork() {
     // 1 <-> 4
     network.addEdge(node1, RoadEdge{
         .destination = node4,
-        .distance = 3.8,
+        .distance = 3.9,
         .speedLimit = 30
     });
 
     network.addEdge(node4, RoadEdge{
         .destination = node1,
-        .distance = 3.8,
+        .distance = 3.9,
         .speedLimit = 30
     });
 
