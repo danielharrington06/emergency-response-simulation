@@ -69,7 +69,7 @@ size_t RoadNetwork::edgeCount() const {
 // debugging
 
 void RoadNetwork::printNetwork() const {
-    std::cout << "=== Road Network ===\n";
+    std::cout << "=== Road Network ===\n\n";
     for (size_t i = 0; i < nodes.size(); i++) {
         std::cout << "Node " << i << ":\n";
         std::cout << "\tLatitude: " << nodes.at(i).latitude << '\n';
