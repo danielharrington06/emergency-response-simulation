@@ -11,6 +11,7 @@ RoadNetwork createTestNetwork() {
     uint32_t node3 = network.addNode(1003, 5.5, 2.0);
     uint32_t node4 = network.addNode(1004, 1.7, 0.2);
     uint32_t node5 = network.addNode(1005, 4.2, 0.0);
+    uint32_t node6 = network.addNode(1006, 100.0, 0.0);
 
     // 0 <-> 1
     network.addEdge(node0, RoadEdge{

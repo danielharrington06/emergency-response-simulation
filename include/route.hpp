@@ -4,29 +4,40 @@
 #include <vector>
 #include <iostream>
 
+enum class RouteStatus {
+    Found,
+    NoRoute,
+    InvalidNode
+};
+
 struct Route {
     std::vector<uint32_t> nodes;
+
+    uint32_t start;
+    uint32_t destination;
 
     double totalDistance = 0.0;
     double totalTravelTime = 0.0;
 
     uint32_t nodesVisited = 0;
 
-    bool found = false;
+    RouteStatus status = RouteStatus::NoRoute;
 
     void printRoute() {
         std::cout << "\n=== Route Calculation ===\n\n";
 
-        std::cout << "Start: Node 0\n";
-        std::cout << "Destination: Node 3\n";
+        std::cout << "Start: Node " << start << '\n';
+        std::cout << "Destination: Node " << destination << '\n';
         std::cout << "Algorithm: A*\n\n";
 
         std::cout << "Route found: "
-                << (found ? "YES" : "NO")
+                << (status==RouteStatus::Found ? "YES" : "NO")
+                << "\n";
+        std::cout << "Node Index Error: "
+                << (status==RouteStatus::InvalidNode ? "YES" : "NO")
                 << "\n\n";
 
-
-        if (found) {
+        if (status==RouteStatus::Found) {
 
             std::cout << "Route: ";
 

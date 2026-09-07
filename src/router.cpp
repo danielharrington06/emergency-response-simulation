@@ -1,4 +1,5 @@
 #include "../include/router.hpp"
+#include "../include/route.hpp"
 
 #include <cmath>
 #include <limits>
@@ -30,7 +31,16 @@ double heuristic(const RoadNetwork& network, uint32_t current, uint32_t destinat
 Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination) { // uses A* algorithm to find route
     Route route;
 
+    route.start = start;
+    route.destination = destination;
+
     const uint32_t nodeCount = network.nodeCount();
+
+    // check valid indexes
+    if (start >= nodeCount || destination >= nodeCount) {
+        route.status = RouteStatus::InvalidNode;
+        return route;
+    }
 
     const double infinity = std::numeric_limits<double>::infinity();
 
@@ -89,7 +99,7 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
 
     // route found
 
-    route.found = true;
+    route.status = RouteStatus::Found;
 
     // so reconstruct node sequeuence
 
