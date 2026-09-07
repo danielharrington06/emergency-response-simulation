@@ -27,7 +27,7 @@ double heuristic(const RoadNetwork& network, uint32_t current, uint32_t destinat
     return std::sqrt(dx*dx + dy*dy);
 }
 
-Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination) {
+Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination) { // uses A* algorithm to find route
     Route route;
 
     const uint32_t nodeCount = network.nodeCount();
@@ -37,6 +37,8 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
     std::vector<double> gScore(nodeCount, infinity);
     std::vector<uint32_t> parent(nodeCount, std::numeric_limits<uint32_t>::max());
     std::priority_queue<QueueNode, std::vector<QueueNode>, CompareQueueNode> openSet;
+
+    gScore[start] = 0.0;
 
     openSet.push(QueueNode{
         .node = start,
