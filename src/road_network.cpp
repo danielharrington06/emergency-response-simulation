@@ -82,9 +82,11 @@ public:
             std::cout << "Node " << i << ":\n";
             std::cout << "\tLatitude: " << nodes.at(i).latitude << '\n';
             std::cout << "\tLongitude: " << nodes.at(i).longitude << '\n';
-            std::cout << "\tEdges:";
+            std::cout << "\tEdges:\n";
             for (const RoadEdge& edge : adjacency.at(i)) {
-                std::cout << "\t\tDestination: Node " << edge.destination << "\t, Distance: " << edge.distance << "units" << "\t, Speed Limit: " << edge.speedLimit << "units per hour\n";
+                std::cout << "\t\tDestination: Node " << edge.destination 
+                << "\t, Distance: " << edge.distance << "units" 
+                << "\t, Speed Limit: " << edge.speedLimit << "units per hour\n";
             }
             std::cout << '\n';
         }
