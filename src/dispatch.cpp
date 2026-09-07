@@ -68,7 +68,8 @@ std::string vehicleStatusToString(VehicleStatus status) {
 }
 
 void Dispatch::printDispatch() const {
-    std::cout << "=== Vehicles ===\n\n";
+    std::cout << "=== Vehicles ===\n";
+    std::cout << "Count: " << vehicleCount() << "\n\n";
     for (size_t i = 0; i < vehicles.size(); i++) {
         std::cout << "Vehicle " << i << ":\n";
         std::cout << "\tLocation: Node " << vehicles.at(i).location << '\n';
@@ -80,10 +81,11 @@ void Dispatch::printDispatch() const {
         }
     }
 
-    std::cout << "\n\n=== Incidents ===\n\n";
+    std::cout << "\n=== Incidents ===\n";
+    std::cout << "Count: " << incidentCount() << "\n\n";
     for (size_t i = 0; i < incidents.size(); i++) {
         std::cout << "Incident " << i << ":\n";
         std::cout << "\tLocation: Node " << incidents.at(i).location << '\n';
-        std::cout << "\Severity: " << incidents.at(i).severity << '\n';
+        std::cout << "\tSeverity: " << incidents.at(i).severity << '\n';
     }
 }
