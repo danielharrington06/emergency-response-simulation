@@ -5,7 +5,8 @@
 #include <cstdint>
 #include <iostream>
 #include <optional>
-    // construction
+
+// construction
 
 uint32_t RoadNetwork::addNode(int64_t osmId, double latitude, double longitude) {
     RoadNode node {
@@ -69,7 +70,7 @@ size_t RoadNetwork::edgeCount() const {
 // debugging
 
 void RoadNetwork::printNetwork() const {
-    std::cout << "=== Road Network ===\n";
+    std::cout << "\n=== Road Network ===\n";
     std::cout << "Nodes: " << nodeCount() << '\n';
     std::cout << "Directed edges: " << edgeCount() << "\n\n";
     for (size_t i = 0; i < nodes.size(); i++) {

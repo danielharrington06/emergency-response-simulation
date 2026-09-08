@@ -2,6 +2,7 @@
 
 #include "emergency_vehicle.hpp"
 #include "incident.hpp"
+#include "road_network.hpp"
 
 #include <vector>
 #include <unordered_map>
@@ -20,8 +21,11 @@ public:
     const EmergencyVehicle& getVehicle(uint32_t id) const;
     const Incident& getIncident(uint32_t id) const;
 
+    std::vector<std::vector<double>> calculateResponseTimes(const RoadNetwork& network) const;
+
     size_t incidentCount() const;
     size_t vehicleCount() const;
 
     void printDispatch() const;
+    void printResponseTimesMatrix(std::vector<std::vector<double>> responseTimes) const;
 };

@@ -5,14 +5,15 @@
 #include <iostream>
 
 int main() {
-    std::cout << "Emergency Response Simulation\n\n";
+    std::cout << "Emergency Response Simulation\n";
 
     RoadNetwork network = createTestNetwork();
     network.printNetwork();
-    std::cout << "\n";
 
     Dispatch dispatch = createTestDispatch();
     dispatch.printDispatch();
+
+    dispatch.printResponseTimesMatrix(dispatch.calculateResponseTimes(network));
 
     return 0;
 }
