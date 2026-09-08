@@ -9,7 +9,7 @@ int main() {
 
     RoadNetwork network = createTestNetwork();
 
-    Dispatch dispatch = createTestDispatchEqual(network);
+    Dispatch dispatch = createMoreIncidentsTest(network);
 
     std::cout << "\n-> Calculating Optimal Vehicle-Incident Assignments...\n";
     dispatch.findOptimalAssignment();

@@ -63,6 +63,7 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
             }
         }
     }
+    printResponseTimesMatrix(responseTimes);
 
     return responseTimes;
 }
