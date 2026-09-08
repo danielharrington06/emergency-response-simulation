@@ -25,7 +25,11 @@ double heuristic(const RoadNetwork& network, uint32_t current, uint32_t destinat
     double dx = currentNode.latitude - destinationNode.latitude;
     double dy = currentNode.longitude - destinationNode.longitude;
 
-    return std::sqrt(dx*dx + dy*dy);
+    double distance = std::sqrt(dx*dx + dy*dy);
+
+    const double max_speed = 113; //km/h
+
+    return distance/max_speed * 60.0;
 }
 
 Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination) { // uses A* algorithm to find route
@@ -76,7 +80,7 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
 
         for (const RoadEdge& edge : network.getNeighbours(currentNode)) {
             uint32_t neighbour = edge.destination;
-            double tentativeGScore = gScore[currentNode] + edge.distance;
+            double tentativeGScore = gScore[currentNode] + (edge.distance/edge.speedLimit) * 60.0;
 
             if (tentativeGScore < gScore[neighbour]) {
                 gScore[neighbour] = tentativeGScore;
@@ -117,9 +121,9 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
 
     std::reverse(route.nodes.begin(), route.nodes.end());
 
-    route.totalDistance = gScore[destination];
+    route.totalTravelTime = gScore[destination];
 
-    // calculate travel time
+    // calculate travel distance
 
     for (size_t i = 0; i + 1 < route.nodes.size(); i++) {
 
@@ -130,7 +134,7 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
 
             if (edge.destination == to) {
 
-                route.totalTravelTime += (edge.distance / edge.speedLimit) * 60.0;
+                route.totalDistance += edge.distance;
 
                 break;
             }

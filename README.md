@@ -1,12 +1,16 @@
 # Emergency Response Simulation
 
-## A* Pathfinding
-Uses a pythagorean, shortest distance heuristic currently.
+## A* Pathfinding: `router.cpp`
+Heuristically minimises travel time. Achieves this by considering the pythagorean shortest distance (not geographicaly accurate) and maximum speed limit (which will later be adjusted to the maximum speed limit of the vehicle when we also update edge speeds).
 
-## Dispatch
+$$
+time \ (mins) = \frac{shortest \ distance \ (km)}{max \ speed \ (km/h)} * 60
+$$
+
+## Incident Assignment: `dispatch.cpp`
 Assigns all high priority incidents, then all medium priority incidents, then all low priority incidents, minimising total time at each stage.
 
-However, this is currently inconsistent with the A* `router.cpp` which minimises distance.
+Assignment is done by minimising total time for incidents of the current severity for the available ambulances. A deliberate result of this is that a closer medium severity incident cannot be assigned over a further high severity incident. I considered using a combined metric to balance this, but thought that arbitrary weights would be further from the desired outcome at this point.
 
 ## Project Structure
 ```vbnet
