@@ -59,6 +59,47 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(const RoadNetw
     return responseTimes;
 }
 
+void Dispatch::assignVehiclesToIncidents(const std::vector<std::vector<double>>& responseTimes) {
+    std::vector<DispatchAssignment> bestAssignment;
+
+    double bestTotalTime = std::numeric_limits<double>::infinity();
+
+    std::vector<uint32_t> incidentOrder(incidents.size());
+
+    for (uint32_t i = 0; i < incidents.size(); i++) {
+        incidentOrder[i] = i;
+    }
+
+    do {
+        double totalTime = 0.0;
+
+        for (uint32_t vehicle = 0; vehicle < vehicles.size(); vehicle++) {
+            uint32_t incident = incidentOrder.at(vehicle);
+
+            totalTime += responseTimes.at(vehicle).at(incident);
+        }
+
+        if (totalTime < bestTotalTime) {
+            bestTotalTime = totalTime;
+            bestAssignment.clear();
+
+            for (uint32_t vehicle = 0; vehicle < vehicles.size(); vehicle++) {
+                uint32_t incident = incidentOrder.at(vehicle);
+                bestAssignment.push_back({vehicle, incident, responseTimes.at(vehicle).at(incident)});
+            }
+        }
+    } while (std::next_permutation(incidentOrder.begin(), incidentOrder.end()));
+
+    // now set bestAssignment to actual assignment
+
+    for (uint32_t vehicle = 0; vehicle < vehicles.size(); vehicle++) {
+        vehicleAssignments[vehicle] = bestAssignment.at(vehicle);
+        vehicles.at(vehicle).status = VehicleStatus::Dispatched;
+    }
+}
+
+
+
 size_t Dispatch::incidentCount() const {
     return incidents.size();
 }
@@ -100,8 +141,10 @@ void Dispatch::printDispatch() const {
         VehicleStatus status = vehicles.at(i).status;
         std::cout << "\tStatus: " << vehicleStatusToString(status) << '\n';
         if (status == VehicleStatus::Dispatched) {
-            std::cout << "\tAssigned to: Incident " << vehicleAssignments.at(i);
+            std::cout << "\tAssigned to: Incident " << vehicleAssignments.at(i).incident << '\n';
+            std::cout << "\tResponse Time: " << vehicleAssignments.at(i).responseTime << " mins\n";
         }
+        std::cout << '\n';
     }
     
     std::cout << "\n=== Incidents ===\n";
@@ -109,17 +152,13 @@ void Dispatch::printDispatch() const {
     for (size_t i = 0; i < incidents.size(); i++) {
         std::cout << "Incident " << i << ":\n";
         std::cout << "\tLocation: Node " << incidents.at(i).location << '\n';
-        std::cout << "\tSeverity: " << incidents.at(i).severity << '\n';
+        std::cout << "\tSeverity: " << incidents.at(i).severity << "\n\n";
     }
 }
 
-void Dispatch::printResponseTimesMatrix(std::vector<std::vector<double>> responseTimes) const {
+void Dispatch::printResponseTimesMatrix(std::vector<std::vector<double>>& responseTimes) const {
     std::cout << "\n=== Response Time Matrix ===\n\n";
-    std::cout << "\t\t";
-    for (size_t j = 0; j < responseTimes.at(0).size(); j++) {
-        std::cout << j << '\t';
-    }
-    std::cout << "\n";
+
     for (size_t i = 0; i < responseTimes.size(); i++) {
 
         std::cout << "Vehicle " << i << ":\t";
@@ -135,5 +174,21 @@ void Dispatch::printResponseTimesMatrix(std::vector<std::vector<double>> respons
         }
 
         std::cout << '\n';
+    }
+}
+
+void Dispatch::printAssignments() const {
+    std::cout << "\n=== Dispatch Assignments ===\n\n";
+
+    for (uint32_t vehicleId = 0; vehicleId < vehicles.size(); vehicleId++) {
+
+        const DispatchAssignment& assignment = vehicleAssignments.at(vehicleId);
+
+        std::cout << "Vehicle " << assignment.vehicle << " -> "
+                  << "Incident " << assignment.incident << '\n';
+
+        std::cout << "\tResponse time: "
+                  << assignment.responseTime
+                  << " minutes\n\n";
     }
 }

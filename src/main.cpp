@@ -8,12 +8,16 @@ int main() {
     std::cout << "Emergency Response Simulation\n";
 
     RoadNetwork network = createTestNetwork();
-    network.printNetwork();
+    //network.printNetwork();
 
     Dispatch dispatch = createTestDispatch();
-    dispatch.printDispatch();
+    //dispatch.printDispatch();
 
-    dispatch.printResponseTimesMatrix(dispatch.calculateResponseTimes(network));
+    std::cout << "\n-> Calculating Optimal Vehicle-Incident Assignments...\n";
+    std::vector<std::vector<double>> responseTimes = dispatch.calculateResponseTimes(network);
+    dispatch.assignVehiclesToIncidents(responseTimes);
+
+    dispatch.printAssignments();
 
     return 0;
 }

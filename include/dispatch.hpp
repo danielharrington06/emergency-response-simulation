@@ -7,12 +7,18 @@
 #include <vector>
 #include <unordered_map>
 
+struct DispatchAssignment {
+    uint32_t vehicle;
+    uint32_t incident;
+    double responseTime;
+};
+
 class Dispatch {
 
 private:
     std::vector<Incident> incidents;
     std::vector<EmergencyVehicle> vehicles;
-    std::unordered_map<uint32_t, uint32_t> vehicleAssignments;
+    std::unordered_map<uint32_t, DispatchAssignment> vehicleAssignments;
 
 public:
     uint32_t addVehicle(uint32_t location, VehicleType type);
@@ -23,9 +29,12 @@ public:
 
     std::vector<std::vector<double>> calculateResponseTimes(const RoadNetwork& network) const;
 
+    void assignVehiclesToIncidents(const std::vector<std::vector<double>>& responeTimes);
+
     size_t incidentCount() const;
     size_t vehicleCount() const;
 
     void printDispatch() const;
-    void printResponseTimesMatrix(std::vector<std::vector<double>> responseTimes) const;
+    void printResponseTimesMatrix(std::vector<std::vector<double>>& responseTimes) const;
+    void printAssignments() const;
 };
