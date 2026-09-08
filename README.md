@@ -46,6 +46,8 @@ clang++ -std=c++17 \
     src/router.cpp \
     src/dispatch.cpp \
     src/test_dispatch.cpp \
+    src/incident.cpp \
+    src/emergency_vehicle.cpp \
     -framework Metal \
     -framework Foundation \
     -o bin/main

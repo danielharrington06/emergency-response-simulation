@@ -2,15 +2,16 @@
 #include "../include/dispatch.hpp"
 
 Dispatch createTestDispatchEqual(RoadNetwork network) {
+
     Dispatch dispatch(network);
 
     dispatch.addVehicle(0, VehicleType::Ambulance);
     dispatch.addVehicle(1, VehicleType::Ambulance);
     dispatch.addVehicle(5, VehicleType::Ambulance);
 
-    dispatch.addIncident(3, IncidentSeverity::Low);
-    dispatch.addIncident(4, IncidentSeverity::Medium);
-    dispatch.addIncident(2, IncidentSeverity::High);
+    dispatch.addIncident(3, IncidentType::Medical, IncidentSeverity::Low);
+    dispatch.addIncident(4, IncidentType::Medical, IncidentSeverity::Medium);
+    dispatch.addIncident(2, IncidentType::Medical, IncidentSeverity::High);
 
     return dispatch;
 }
@@ -25,8 +26,8 @@ Dispatch createMoreVehiclesTest(RoadNetwork network) {
     dispatch.addVehicle(4, VehicleType::Ambulance);
     dispatch.addVehicle(5, VehicleType::Ambulance);
 
-    dispatch.addIncident(3, IncidentSeverity::High);
-    dispatch.addIncident(2, IncidentSeverity::Medium);
+    dispatch.addIncident(3, IncidentType::Medical, IncidentSeverity::High);
+    dispatch.addIncident(2, IncidentType::Medical, IncidentSeverity::Medium);
 
     return dispatch;
 }
@@ -39,10 +40,10 @@ Dispatch createMoreIncidentsTest(RoadNetwork network) {
     dispatch.addVehicle(0, VehicleType::Ambulance);
     dispatch.addVehicle(5, VehicleType::Ambulance);
 
-    dispatch.addIncident(3, IncidentSeverity::High);
-    dispatch.addIncident(2, IncidentSeverity::High);
-    dispatch.addIncident(4, IncidentSeverity::Medium);
-    dispatch.addIncident(1, IncidentSeverity::Low);
+    dispatch.addIncident(3, IncidentType::Medical, IncidentSeverity::High);
+    dispatch.addIncident(2, IncidentType::Medical, IncidentSeverity::High);
+    dispatch.addIncident(4, IncidentType::Medical, IncidentSeverity::Medium);
+    dispatch.addIncident(1, IncidentType::Medical, IncidentSeverity::Low);
 
     return dispatch;
 }
@@ -56,21 +57,20 @@ Dispatch createPriorityCutoffTest(RoadNetwork network) {
     dispatch.addVehicle(1, VehicleType::Ambulance);
 
     // 3 High, 3 Medium, 3 Low
-    dispatch.addIncident(3, IncidentSeverity::High);
-    dispatch.addIncident(2, IncidentSeverity::High);
-    dispatch.addIncident(5, IncidentSeverity::High);
+    dispatch.addIncident(3, IncidentType::Medical, IncidentSeverity::High);
+    dispatch.addIncident(2, IncidentType::Medical, IncidentSeverity::High);
+    dispatch.addIncident(5, IncidentType::Medical, IncidentSeverity::High);
 
-    dispatch.addIncident(4, IncidentSeverity::Medium);
-    dispatch.addIncident(1, IncidentSeverity::Medium);
-    dispatch.addIncident(0, IncidentSeverity::Medium);
+    dispatch.addIncident(4, IncidentType::Medical, IncidentSeverity::Medium);
+    dispatch.addIncident(1, IncidentType::Medical, IncidentSeverity::Medium);
+    dispatch.addIncident(0, IncidentType::Medical, IncidentSeverity::Medium);
 
-    dispatch.addIncident(2, IncidentSeverity::Low);
-    dispatch.addIncident(3, IncidentSeverity::Low);
-    dispatch.addIncident(5, IncidentSeverity::Low);
+    dispatch.addIncident(2, IncidentType::Medical, IncidentSeverity::Low);
+    dispatch.addIncident(3, IncidentType::Medical, IncidentSeverity::Low);
+    dispatch.addIncident(5, IncidentType::Medical, IncidentSeverity::Low);
 
     return dispatch;
 }
-
 
 Dispatch createSingleHighTest(RoadNetwork network) {
 
@@ -81,11 +81,10 @@ Dispatch createSingleHighTest(RoadNetwork network) {
     dispatch.addVehicle(1, VehicleType::Ambulance);
     dispatch.addVehicle(5, VehicleType::Ambulance);
 
-    dispatch.addIncident(3, IncidentSeverity::High);
+    dispatch.addIncident(3, IncidentType::Medical, IncidentSeverity::High);
 
     return dispatch;
 }
-
 
 Dispatch createNoIncidentsTest(RoadNetwork network) {
 
@@ -98,14 +97,13 @@ Dispatch createNoIncidentsTest(RoadNetwork network) {
     return dispatch;
 }
 
-
 Dispatch createNoVehiclesTest(RoadNetwork network) {
 
     Dispatch dispatch(network);
 
-    dispatch.addIncident(3, IncidentSeverity::High);
-    dispatch.addIncident(4, IncidentSeverity::Medium);
-    dispatch.addIncident(2, IncidentSeverity::Low);
+    dispatch.addIncident(3, IncidentType::Medical, IncidentSeverity::High);
+    dispatch.addIncident(4, IncidentType::Medical, IncidentSeverity::Medium);
+    dispatch.addIncident(2, IncidentType::Medical, IncidentSeverity::Low);
 
     return dispatch;
 }

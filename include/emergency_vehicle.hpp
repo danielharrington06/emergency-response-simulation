@@ -1,9 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 enum class VehicleType {
-    Ambulance
+    Ambulance,
+    FireEngine,
+    PoliceCar
 };
 
 enum class VehicleStatus {
@@ -17,3 +20,6 @@ struct EmergencyVehicle {
     VehicleType type;
     VehicleStatus status;
 };
+
+std::string vehicleTypeToString(VehicleType type);
+std::string vehicleStatusToString(VehicleStatus status);

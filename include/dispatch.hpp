@@ -30,7 +30,7 @@ public:
     }
 
     uint32_t addVehicle(uint32_t location, VehicleType type);
-    uint32_t addIncident(uint32_t location, IncidentSeverity severity);
+    uint32_t addIncident(uint32_t location, IncidentType, IncidentSeverity severity);
 
     const EmergencyVehicle& getVehicle(uint32_t id) const;
     const Incident& getIncident(uint32_t id) const;

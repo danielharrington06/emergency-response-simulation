@@ -8,6 +8,21 @@
 #include <cmath>
 #include <limits>
 
+bool isVehicleCompatible(VehicleType vehicleType, IncidentType incidentType) {
+    switch (incidentType) {
+        case IncidentType::Medical:
+            return vehicleType == VehicleType::Ambulance;
+
+        case IncidentType::Fire:
+            return vehicleType == VehicleType::FireEngine;
+
+        case IncidentType::Crime:
+            return vehicleType == VehicleType::PoliceCar;
+    }
+
+    return false;
+}
+
 uint32_t Dispatch::addVehicle(uint32_t location, VehicleType type) {
     uint32_t index = vehicles.size();
     
@@ -22,12 +37,13 @@ uint32_t Dispatch::addVehicle(uint32_t location, VehicleType type) {
     return index;
 }
 
-uint32_t Dispatch::addIncident(uint32_t location, IncidentSeverity severity) {
+uint32_t Dispatch::addIncident(uint32_t location, IncidentType type, IncidentSeverity severity) {
     uint32_t index = incidents.size();
 
     Incident incident {
         .id = index,
         .location = location,
+        .type = type,
         .severity = severity
     };
 
@@ -55,7 +71,11 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
             uint32_t incidentId = incidentsOfThisPriority.at(j);
 
             Route route = findRoute(network, vehicles.at(vehicleId).location, incidents.at(incidentId).location);
-            if (route.status == RouteStatus::Found) {
+            if (!isVehicleCompatible(vehicles.at(vehicleId).type, incidents.at(incidentId).type)) {
+                responseTimes.at(i).at(j) = infinity;
+                continue;
+            }
+            else if (route.status == RouteStatus::Found) {
                 responseTimes.at(i).at(j) = route.totalTravelTime;
             }
             else {
@@ -205,49 +225,12 @@ void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, 
 }
 
 
-
 size_t Dispatch::incidentCount() const {
     return incidents.size();
 }
 
 size_t Dispatch::vehicleCount() const {
     return vehicles.size();
-}
-
-std::string vehicleTypeToString(VehicleType type) {
-
-    switch (type) {
-        case VehicleType::Ambulance:
-            return "Ambulance";
-    }
-
-    return "Unknown";
-}
-
-std::string vehicleStatusToString(VehicleStatus status) {
-
-    switch (status) {
-        case VehicleStatus::Available:
-            return "Available";
-
-        case VehicleStatus::Dispatched:
-            return "Dispatched";
-    }
-
-    return "Unknown";
-}
-
-std::string incidentSeverityToString(IncidentSeverity severity) {
-    switch (severity) {
-        case IncidentSeverity::Low:
-            return "Low";
-        case IncidentSeverity::Medium:
-            return "Medium";
-        case IncidentSeverity::High:
-            return "High";
-    }
-    
-    return "Unknown";
 }
 
 void Dispatch::printVehicles() const {
