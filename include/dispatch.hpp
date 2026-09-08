@@ -36,13 +36,12 @@ public:
     const Incident& getIncident(uint32_t id) const;
 
     std::vector<std::vector<double>> calculateResponseTimes(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) const;
-    void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority);
+    void assignAvailableVehiclesToIncidents(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority);
     void findOptimalAssignment();
 
     size_t incidentCount() const;
     size_t vehicleCount() const;
 
-    void printDispatch() const;
     void printResponseTimesMatrix(std::vector<std::vector<double>>& responseTimes) const;
     void printVehicles() const;
     void printIncidents() const;

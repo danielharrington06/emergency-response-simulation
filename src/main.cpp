@@ -8,15 +8,14 @@ int main() {
     std::cout << "Emergency Response Simulation\n";
 
     RoadNetwork network = createTestNetwork();
-    //network.printNetwork();
 
-    Dispatch dispatch = createTestDispatch();
-    //dispatch.printDispatch();
+    Dispatch dispatch = createTestDispatchEqual(network);
 
     std::cout << "\n-> Calculating Optimal Vehicle-Incident Assignments...\n";
     dispatch.findOptimalAssignment();
 
-    dispatch.printAssignments();
+    dispatch.printVehicles();
+    dispatch.printIncidents();
 
     return 0;
 }
