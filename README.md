@@ -1,5 +1,16 @@
 # Emergency Response Simulation
 
+## A* Pathfinding
+Uses a pythagorean, shortest distance heuristic currently.
+
+## Dispatch
+Assigns all high priority incidents, then all medium priority incidents, then all low priority incidents, minimising total time at each stage.
+
+However, this is currently inconsistent with the A* `router.cpp` which minimises distance.
+
+## Project Structure
+
+
 ## Compile and Run
 ```bash
 clang++ -std=c++17 \
