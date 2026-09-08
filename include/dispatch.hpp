@@ -20,16 +20,18 @@ private:
     std::vector<EmergencyVehicle> vehicles;
     std::unordered_map<uint32_t, DispatchAssignment> vehicleAssignments;
 
+    std::vector<uint32_t> selectIncidents() const;
+
 public:
     uint32_t addVehicle(uint32_t location, VehicleType type);
-    uint32_t addIncident(uint32_t location, uint32_t severity);
+    uint32_t addIncident(uint32_t location, IncidentSeverity severity);
 
     const EmergencyVehicle& getVehicle(uint32_t id) const;
     const Incident& getIncident(uint32_t id) const;
 
     std::vector<std::vector<double>> calculateResponseTimes(const RoadNetwork& network) const;
 
-    void assignVehiclesToIncidents(const std::vector<std::vector<double>>& responeTimes);
+    void findOptimalAssignment(const std::vector<std::vector<double>>& responeTimes);
 
     size_t incidentCount() const;
     size_t vehicleCount() const;

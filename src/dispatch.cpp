@@ -1,5 +1,6 @@
 #include "../include/dispatch.hpp"
 #include "../include/router.hpp"
+#include "../include/incident.hpp"
 
 #include <iostream>
 #include <string>
@@ -18,7 +19,7 @@ uint32_t Dispatch::addVehicle(uint32_t location, VehicleType type) {
     return index;
 }
 
-uint32_t Dispatch::addIncident(uint32_t location, uint32_t severity) {
+uint32_t Dispatch::addIncident(uint32_t location, IncidentSeverity severity) {
     uint32_t index = incidents.size();
 
     Incident incident {
@@ -59,22 +60,66 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(const RoadNetw
     return responseTimes;
 }
 
-void Dispatch::assignVehiclesToIncidents(const std::vector<std::vector<double>>& responseTimes) {
+std::vector<uint32_t> Dispatch::selectIncidents() const {
+    std::vector<uint32_t> selectedIncidents;
+    
+    // more incidents than vehicles
+    if (incidents.size() > vehicles.size()) {
+        
+        for (uint32_t incidentId = 0; incidentId < incidents.size(); incidentId++) {
+            selectedIncidents.push_back(incidentId);
+        }
+        
+        std::sort(selectedIncidents.begin(), selectedIncidents.end(), [this](uint32_t a, uint32_t b) {
+            return incidents.at(a).severity > incidents.at(b).severity;
+        });
+        
+        size_t incidentLimit = vehicles.size();
+
+        if (selectedIncidents.size() > incidentLimit) {
+
+            IncidentSeverity cutoffSeverity =
+                incidents.at(selectedIncidents.at(incidentLimit - 1)).severity;
+
+            while (
+                incidentLimit < selectedIncidents.size() &&
+                incidents.at(selectedIncidents.at(incidentLimit)).severity
+                    == cutoffSeverity
+            ) {
+                incidentLimit++;
+            }
+
+            selectedIncidents.resize(incidentLimit);
+        }
+    }
+    else {
+        for (Incident incident : incidents) {
+            selectedIncidents.push_back(incident.id);
+        }
+    }
+    return selectedIncidents;
+}
+
+void Dispatch::findOptimalAssignment(const std::vector<std::vector<double>>& responseTimes) {
+
+    vehicleAssignments.clear();
+
+    // deal with no vehicles or no incidents
+    if (vehicles.empty() || incidents.empty()) {
+        return;
+    }
+
+    std::vector<uint32_t> selectedIncidents = selectIncidents();
+
     std::vector<DispatchAssignment> bestAssignment;
 
     double bestTotalTime = std::numeric_limits<double>::infinity();
-
-    std::vector<uint32_t> incidentOrder(incidents.size());
-
-    for (uint32_t i = 0; i < incidents.size(); i++) {
-        incidentOrder[i] = i;
-    }
 
     do {
         double totalTime = 0.0;
 
         for (uint32_t vehicle = 0; vehicle < vehicles.size(); vehicle++) {
-            uint32_t incident = incidentOrder.at(vehicle);
+            uint32_t incident = selectedIncidents.at(vehicle);
 
             totalTime += responseTimes.at(vehicle).at(incident);
         }
@@ -84,11 +129,11 @@ void Dispatch::assignVehiclesToIncidents(const std::vector<std::vector<double>>&
             bestAssignment.clear();
 
             for (uint32_t vehicle = 0; vehicle < vehicles.size(); vehicle++) {
-                uint32_t incident = incidentOrder.at(vehicle);
+                uint32_t incident = selectedIncidents.at(vehicle);
                 bestAssignment.push_back({vehicle, incident, responseTimes.at(vehicle).at(incident)});
             }
         }
-    } while (std::next_permutation(incidentOrder.begin(), incidentOrder.end()));
+    } while (std::next_permutation(selectedIncidents.begin(), selectedIncidents.end()));
 
     // now set bestAssignment to actual assignment
 
@@ -131,6 +176,19 @@ std::string vehicleStatusToString(VehicleStatus status) {
     return "Unknown";
 }
 
+std::string incidentSeverityToString(IncidentSeverity severity) {
+    switch (severity) {
+        case IncidentSeverity::Low:
+            return "Low";
+        case IncidentSeverity::Medium:
+            return "Medium";
+        case IncidentSeverity::High:
+            return "High";
+    }
+    
+    return "Unknown";
+}
+
 void Dispatch::printDispatch() const {
     std::cout << "\n=== Vehicles ===\n";
     std::cout << "Count: " << vehicleCount() << "\n\n";
@@ -152,7 +210,7 @@ void Dispatch::printDispatch() const {
     for (size_t i = 0; i < incidents.size(); i++) {
         std::cout << "Incident " << i << ":\n";
         std::cout << "\tLocation: Node " << incidents.at(i).location << '\n';
-        std::cout << "\tSeverity: " << incidents.at(i).severity << "\n\n";
+        std::cout << "\tSeverity: " << incidentSeverityToString(incidents.at(i).severity) << "\n\n";
     }
 }
 
