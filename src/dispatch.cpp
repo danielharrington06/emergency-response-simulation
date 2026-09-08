@@ -143,6 +143,16 @@ void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availabl
     }
 }
 
+std::vector<uint32_t> Dispatch::buildAvailableVehicles() {
+    std::vector<uint32_t> availableVehicles;
+    for (const EmergencyVehicle& vehicle : vehicles) {
+        if (vehicle.status == VehicleStatus::Available) {
+            availableVehicles.push_back(vehicle.id);
+        }
+    }
+    return availableVehicles;
+}
+
 void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, so all high first, then medium, then low, minimising total response time in each section
 
     vehicleAssignments.clear();
@@ -152,7 +162,45 @@ void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, 
         return;
     }
 
-    // TODO go in order of priority and assign
+    // group incidents by severity
+    std::vector<uint32_t> highSeverityIncidents;
+    std::vector<uint32_t> mediumSeverityIncidents;
+    std::vector<uint32_t> lowSeverityIncidents;
+    
+    for (const Incident& incident : incidents) {
+        switch(incident.severity) {
+            case IncidentSeverity::High:
+            highSeverityIncidents.push_back(incident.id);
+            break;
+            case IncidentSeverity::Medium:
+            mediumSeverityIncidents.push_back(incident.id);
+            break;
+            case IncidentSeverity::Low:
+            lowSeverityIncidents.push_back(incident.id);
+            break;
+        }
+    }
+    
+    // start with every available vehicle
+    std::vector<uint32_t> availableVehicles = buildAvailableVehicles();
+    if (availableVehicles.empty()) return;
+
+    // assign high priority incidents
+    assignAvailableVehiclesToIncidents(availableVehicles, highSeverityIncidents);
+
+    // rebuild list of remaining available vehicles
+    availableVehicles = buildAvailableVehicles();
+    if (availableVehicles.empty()) return;
+
+    // assign medium priority incidents
+    assignAvailableVehiclesToIncidents(availableVehicles, mediumSeverityIncidents);
+
+    // rebuild list of remaining available vehicles
+    availableVehicles = buildAvailableVehicles();
+    if (availableVehicles.empty()) return;
+
+    // assign low priority incidents
+    assignAvailableVehiclesToIncidents(availableVehicles, lowSeverityIncidents);
 }
 
 
@@ -201,7 +249,7 @@ std::string incidentSeverityToString(IncidentSeverity severity) {
     return "Unknown";
 }
 
-void Dispatch::printDispatch() const {
+void Dispatch::printVehicles() const {
     std::cout << "\n=== Vehicles ===\n";
     std::cout << "Count: " << vehicleCount() << "\n\n";
     for (size_t i = 0; i < vehicles.size(); i++) {
@@ -216,7 +264,9 @@ void Dispatch::printDispatch() const {
         }
         std::cout << '\n';
     }
-    
+}
+
+void Dispatch::printIncidents() const {
     std::cout << "\n=== Incidents ===\n";
     std::cout << "Count: " << incidentCount() << "\n\n";
     for (size_t i = 0; i < incidents.size(); i++) {
@@ -244,21 +294,5 @@ void Dispatch::printResponseTimesMatrix(std::vector<std::vector<double>>& respon
         }
 
         std::cout << '\n';
-    }
-}
-
-void Dispatch::printAssignments() const {
-    std::cout << "\n=== Dispatch Assignments ===\n\n";
-
-    for (uint32_t vehicleId = 0; vehicleId < vehicles.size(); vehicleId++) {
-
-        const DispatchAssignment& assignment = vehicleAssignments.at(vehicleId);
-
-        std::cout << "Vehicle " << assignment.vehicle << " -> "
-                  << "Incident " << assignment.incident << '\n';
-
-        std::cout << "\tResponse time: "
-                  << assignment.responseTime
-                  << " minutes\n\n";
     }
 }

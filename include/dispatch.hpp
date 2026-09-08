@@ -22,6 +22,7 @@ private:
     RoadNetwork network;
 
     void assignAvailableVehiclesToIncidents(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority, const std::vector<std::vector<double>>& responseTimes);
+    std::vector<uint32_t> buildAvailableVehicles();
 
 public:
     Dispatch(RoadNetwork rn) {
@@ -43,5 +44,6 @@ public:
 
     void printDispatch() const;
     void printResponseTimesMatrix(std::vector<std::vector<double>>& responseTimes) const;
-    void printAssignments() const;
+    void printVehicles() const;
+    void printIncidents() const;
 };
