@@ -14,8 +14,7 @@ int main() {
     //dispatch.printDispatch();
 
     std::cout << "\n-> Calculating Optimal Vehicle-Incident Assignments...\n";
-    std::vector<std::vector<double>> responseTimes = dispatch.calculateResponseTimes(network);
-    dispatch.assignVehiclesToIncidents(responseTimes);
+    dispatch.findOptimalAssignment();
 
     dispatch.printAssignments();
 

@@ -40,14 +40,18 @@ const Incident& Dispatch::getIncident(uint32_t id) const {
     return incidents.at(id);
 }
 
-std::vector<std::vector<double>> Dispatch::calculateResponseTimes(const RoadNetwork& network) const {
-    std::vector<std::vector<double>> responseTimes(vehicles.size(), std::vector<double>(incidents.size()));
+std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) const {
+
+    std::vector<std::vector<double>> responseTimes(availableVehicles.size(), std::vector<double>(incidentsOfThisPriority.size()));
 
     const double infinity = std::numeric_limits<double>::infinity();
 
-    for (size_t i = 0; i < vehicles.size(); i++) {
-        for (size_t j = 0; j < incidents.size(); j++) {
-            Route route = findRoute(network, vehicles.at(i).location, incidents.at(j).location);
+    for (size_t i = 0; i < availableVehicles.size(); i++) {
+        uint32_t vehicleId = availableVehicles.at(i);
+        for (size_t j = 0; j < incidentsOfThisPriority.size(); j++) {
+            uint32_t incidentId = incidentsOfThisPriority.at(j);
+
+            Route route = findRoute(network, vehicles.at(vehicleId).location, incidents.at(incidentId).location);
             if (route.status == RouteStatus::Found) {
                 responseTimes.at(i).at(j) = route.totalTravelTime;
             }
@@ -60,47 +64,26 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(const RoadNetw
     return responseTimes;
 }
 
-std::vector<uint32_t> Dispatch::selectIncidents() const {
-    std::vector<uint32_t> selectedIncidents;
-    
-    // more incidents than vehicles
-    if (incidents.size() > vehicles.size()) {
-        
-        for (uint32_t incidentId = 0; incidentId < incidents.size(); incidentId++) {
-            selectedIncidents.push_back(incidentId);
-        }
-        
-        std::sort(selectedIncidents.begin(), selectedIncidents.end(), [this](uint32_t a, uint32_t b) {
-            return incidents.at(a).severity > incidents.at(b).severity;
-        });
-        
-        size_t incidentLimit = vehicles.size();
-
-        if (selectedIncidents.size() > incidentLimit) {
-
-            IncidentSeverity cutoffSeverity =
-                incidents.at(selectedIncidents.at(incidentLimit - 1)).severity;
-
-            while (
-                incidentLimit < selectedIncidents.size() &&
-                incidents.at(selectedIncidents.at(incidentLimit)).severity
-                    == cutoffSeverity
-            ) {
-                incidentLimit++;
-            }
-
-            selectedIncidents.resize(incidentLimit);
-        }
+void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) {
+    if (availableVehicles.empty() || incidentsOfThisPriority.empty()) {
+        return;
     }
-    else {
-        for (Incident incident : incidents) {
-            selectedIncidents.push_back(incident.id);
-        }
-    }
-    return selectedIncidents;
+
+    std::vector<std::vector<double>> responseTimes = calculateResponseTimes(availableVehicles, incidentsOfThisPriority);
+
+    double bestTotalTime = std::numeric_limits<double>::infinity();
+    size_t bestAssignedCount = 0;
+
+    std::vector<DispatchAssignment> currentAssignment;
+    std::vector<DispatchAssignment> bestAssignment;
+
+    std::vector<bool> incidentUsed(
+        incidentsOfThisPriority.size(),
+        false
+    );
 }
 
-void Dispatch::findOptimalAssignment(const std::vector<std::vector<double>>& responseTimes) {
+void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, so all high first, then medium, then low, minimising total response time in each section
 
     vehicleAssignments.clear();
 
@@ -109,38 +92,7 @@ void Dispatch::findOptimalAssignment(const std::vector<std::vector<double>>& res
         return;
     }
 
-    std::vector<uint32_t> selectedIncidents = selectIncidents();
-
-    std::vector<DispatchAssignment> bestAssignment;
-
-    double bestTotalTime = std::numeric_limits<double>::infinity();
-
-    do {
-        double totalTime = 0.0;
-
-        for (uint32_t vehicle = 0; vehicle < vehicles.size(); vehicle++) {
-            uint32_t incident = selectedIncidents.at(vehicle);
-
-            totalTime += responseTimes.at(vehicle).at(incident);
-        }
-
-        if (totalTime < bestTotalTime) {
-            bestTotalTime = totalTime;
-            bestAssignment.clear();
-
-            for (uint32_t vehicle = 0; vehicle < vehicles.size(); vehicle++) {
-                uint32_t incident = selectedIncidents.at(vehicle);
-                bestAssignment.push_back({vehicle, incident, responseTimes.at(vehicle).at(incident)});
-            }
-        }
-    } while (std::next_permutation(selectedIncidents.begin(), selectedIncidents.end()));
-
-    // now set bestAssignment to actual assignment
-
-    for (uint32_t vehicle = 0; vehicle < vehicles.size(); vehicle++) {
-        vehicleAssignments[vehicle] = bestAssignment.at(vehicle);
-        vehicles.at(vehicle).status = VehicleStatus::Dispatched;
-    }
+    // TODO go in order of priority and assign
 }
 
 
