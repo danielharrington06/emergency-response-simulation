@@ -18,7 +18,8 @@ struct CompareQueueNode { // needed to tell the queue to prioritise the least f 
     }
 };
 
-double heuristic(const RoadNetwork& network, uint32_t current, uint32_t destination) { // for test network, using latitude and longitiude as cartesian coordinates, but on real data, we will need geographic distance calculation
+double heuristic(const RoadNetwork& network, uint32_t current, uint32_t destination) { // shortest time, as calculated by distance / max speed
+    // will want to use geographical projection when on a large enough map
     const RoadNode& currentNode = network.getNode(current);
     const RoadNode& destinationNode = network.getNode(destination);
 
@@ -48,9 +49,9 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
 
     const double infinity = std::numeric_limits<double>::infinity();
 
-    std::vector<double> gScore(nodeCount, infinity);
-    std::vector<uint32_t> parent(nodeCount, std::numeric_limits<uint32_t>::max());
-    std::priority_queue<QueueNode, std::vector<QueueNode>, CompareQueueNode> openSet;
+    std::vector<double> gScore(nodeCount, infinity); // currently known least distance to each node from start
+    std::vector<uint32_t> parent(nodeCount, std::numeric_limits<uint32_t>::max()); // keep track for backtracking
+    std::priority_queue<QueueNode, std::vector<QueueNode>, CompareQueueNode> openSet; // queue is needed for A* pathfinding
 
     gScore[start] = 0.0;
 
@@ -72,7 +73,7 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
             continue;
         }
 
-        route.nodesVisited++;
+        route.nodesVisited++; // for statistics tracking
 
         if (currentNode == destination) {
             break;
@@ -108,17 +109,12 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
     // so reconstruct node sequeuence
 
     uint32_t current = destination;
-        while (current != std::numeric_limits<uint32_t>::max()) {
 
+    while (current != std::numeric_limits<uint32_t>::max()) {
         route.nodes.push_back(current);
-
-        if (current == start) {
-            break;
-        }
-
+        if (current == start) break;
         current = parent[current];
     }
-
     std::reverse(route.nodes.begin(), route.nodes.end());
 
     route.totalTravelTime = gScore[destination];
@@ -126,16 +122,12 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
     // calculate travel distance
 
     for (size_t i = 0; i + 1 < route.nodes.size(); i++) {
-
         uint32_t from = route.nodes[i];
         uint32_t to = route.nodes[i + 1];
 
         for (const RoadEdge& edge : network.getNeighbours(from)) {
-
             if (edge.destination == to) {
-
                 route.totalDistance += edge.distance;
-
                 break;
             }
         }

@@ -57,8 +57,8 @@ size_t RoadNetwork::nodeCount() const {
     return nodes.size();
 }
 
-// returns the number of directed edges (so a two-way road is double counted)
-size_t RoadNetwork::edgeCount() const { 
+
+size_t RoadNetwork::edgeCount() const { // returns the number of directed edges (so a two-way road is double counted)
     size_t count = 0;
     for (const std::vector<RoadEdge>& edges : adjacency) {
         count += edges.size();
