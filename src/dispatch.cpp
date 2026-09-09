@@ -59,30 +59,38 @@ const Incident& Dispatch::getIncident(uint32_t id) const {
     return incidents.at(id);
 }
 
-std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) const {
+std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) const { // calculates response times for the given vehicles and incidents
+    // may want to change parameter names to just vehicles and incidents
 
     std::vector<std::vector<double>> responseTimes(availableVehicles.size(), std::vector<double>(incidentsOfThisPriority.size()));
 
     const double infinity = std::numeric_limits<double>::infinity();
 
+    // loop over vehicles, then incidents to get response times
     for (size_t i = 0; i < availableVehicles.size(); i++) {
         uint32_t vehicleId = availableVehicles.at(i);
+
         for (size_t j = 0; j < incidentsOfThisPriority.size(); j++) {
             uint32_t incidentId = incidentsOfThisPriority.at(j);
 
             Route route = findRoute(network, vehicles.at(vehicleId).location, incidents.at(incidentId).location);
+
+            // make response time infinite if vehicle is incompatible
             if (!isVehicleCompatible(vehicles.at(vehicleId).type, incidents.at(incidentId).type)) {
                 responseTimes.at(i).at(j) = infinity;
                 continue;
             }
+            // if route found (and not incompatible) store actual response time
             else if (route.status == RouteStatus::Found) {
                 responseTimes.at(i).at(j) = route.totalTravelTime;
             }
+            // route is unreachable (rare to execute as would require no route between the vehicle and incident)
             else {
                 responseTimes.at(i).at(j) = infinity;
             }
         }
     }
+    // for debugging - remove for larger networks and incident-vehicle counts
     printResponseTimesMatrix(responseTimes);
 
     return responseTimes;
@@ -101,7 +109,6 @@ void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availabl
     std::vector<std::vector<double>> responseTimes = calculateResponseTimes(availableVehicles, incidentsOfThisPriority);
 
     const size_t assignmentSize = std::max(availableVehicles.size(), incidentsOfThisPriority.size());
-
     std::vector<uint32_t> assignmentOrder(assignmentSize);
 
     for (uint32_t i = 0; i < assignmentSize; i++) {
@@ -109,14 +116,12 @@ void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availabl
     }
 
     double bestTotalTime = std::numeric_limits<double>::infinity();
-
-    size_t bestAssignedCount = 0;
+    size_t bestAssignedCount = 0; // this is needed so that the code doesnt minimise total time by not assigning
     std::vector<DispatchAssignment> bestAssignment;
 
     do {
         double totalTime = 0.0;
         size_t assignedCount = 0;
-
         std::vector<DispatchAssignment> currentAssignment;
 
         for(size_t i = 0; i < assignmentSize; i++) {
@@ -149,7 +154,7 @@ void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availabl
             });
         }
 
-        // first maximise the number of incidents assigned, only then minimise total response time
+        // aim: maximise the number of incidents assigned, then minimise total response time
         if (assignedCount > bestAssignedCount || (assignedCount == bestAssignedCount && totalTime < bestTotalTime)) {
             bestAssignedCount = assignedCount;
             bestTotalTime = totalTime;
@@ -164,7 +169,7 @@ void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availabl
     }
 }
 
-std::vector<uint32_t> Dispatch::buildAvailableVehicles() {
+std::vector<uint32_t> Dispatch::buildAvailableVehicles() { // gets a vector of the currently available vehicles
     std::vector<uint32_t> availableVehicles;
     for (const EmergencyVehicle& vehicle : vehicles) {
         if (vehicle.status == VehicleStatus::Available) {
@@ -176,7 +181,7 @@ std::vector<uint32_t> Dispatch::buildAvailableVehicles() {
 
 void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, so all high first, then medium, then low, minimising total response time in each section
 
-    vehicleAssignments.clear();
+    vehicleAssignments.clear(); // probably will not want to do this when dynamically doing stuff 
 
     // deal with no vehicles or no incidents
     if (vehicles.empty() || incidents.empty()) {
