@@ -35,26 +35,26 @@ def main():
 
     print(f"Loaded {len(nodes):,} nodes and {len(edges):,} edges")
 
-    processed_edges = edges[
-        edges["highway"].isin(ROAD_TYPES)
-    ].copy()
+    # print("\nHighway types:")
+    # print(edges["highway"].value_counts().head(30))
 
-    print("\nHighway types:")
-    print(edges["highway"].value_counts().head(30))
-
-    print("\nSample edges:")
-    print(
-        edges[
-            ["u", "v", "length", "highway", "maxspeed", "oneway", "name"]
-        ].head(10).to_string()
-    )
+    # print("\nSample edges:")
+    # print(
+    #     edges[
+    #         ["u", "v", "length", "highway", "maxspeed", "oneway", "name"]
+    #     ].head(10).to_string()
+    # )
 
     processed_nodes = nodes[
         ["id", "lat", "lon"]
     ].copy()
 
     processed_edges = edges[
-        ["u", "v", "length", "highway", "maxspeed", "oneway", "name"]
+        edges["highway"].isin(ROAD_TYPES)
+    ].copy()
+
+    processed_edges = processed_edges[
+        ["u", "v", "name", "length", "highway", "maxspeed", "oneway"]
     ].copy()
 
     processed_edges = processed_edges.rename(columns={
