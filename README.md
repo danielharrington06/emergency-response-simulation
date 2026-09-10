@@ -13,7 +13,7 @@ Assigns all high priority incidents, then all medium priority incidents, then al
 Assignment is done by minimising total time for incidents of the current severity for the available ambulances. A deliberate result of this is that a closer medium severity incident cannot be assigned over a further high severity incident. I considered using a combined metric to balance this, but thought that arbitrary weights would be further from the desired outcome at this point.
 
 ## Data
-OpenStreetMap data was used. I used a location near to me.
+OpenStreetMap data was used. I used a county near me in the UK. To use OSM data, place the `.osm.pbf` file in `osm/`, process it with the python code.
 
 ## Project Structure
 ```vbnet

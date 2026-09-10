@@ -1,10 +1,10 @@
-from pathlib import Path
+
 from pyrosm import OSM
 import math
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from config import OSM_FILE, PROJECT_ROOT
 
-OSM_FILE = PROJECT_ROOT / "data" / "osm" / "hertfordshire.osm.pbf"
+
 OUTPUT_DIR = PROJECT_ROOT / "data" / "processed"
 
 ROAD_TYPES = {
