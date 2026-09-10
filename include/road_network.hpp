@@ -3,6 +3,7 @@
 #include <vector>
 #include <cstdint>
 #include <unordered_map>
+#include <string>
 
 struct RoadNode {
     int64_t id; // external node id

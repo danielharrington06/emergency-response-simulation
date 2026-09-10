@@ -4,116 +4,138 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
-constexpr double METRES_PER_MILE = 1069.344;
+namespace {
 
-std::string removeQuotes(const std::string& value) {
-    if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-        return value.substr(1, value.size()-2);
-    }
-    return value;
-}
+    constexpr double METRES_PER_MILE = 1609.344;
 
-bool parseBool(const std::string& value) {
-    return value == "True" || value == "true" || value == "1";
-}
+    std::vector<std::string> parseCsvLine(const std::string& line) { // written by AI
+        std::vector<std::string> fields;
+        std::string field;
+        bool insideQuotes = false;
 
-void loadNodes(RoadNetwork network, const std::string& nodesFile) {
-    std::ifstream nodeInput(nodesFile);
+        for (size_t i = 0; i < line.size(); i++) {
+            char character = line[i];
+            if (character == '"') {
+                if (insideQuotes && i + 1 < line.size() && line[i + 1] == '"') {
+                    field += '"';
+                    i++;
+                } 
+                else {
+                    insideQuotes = !insideQuotes;
+                }
+            } 
+            else if (character == ',' && !insideQuotes) {
+                fields.push_back(field);
+                field.clear();
+            } 
+            else {
+                field += character;
+            }
+        }
 
-    if (!nodeInput) {
-        throw std::runtime_error("Could not open nodes file: " + nodesFile);
-    }
-
-    std::string line;
-
-    // skip header
-    std::getline(nodeInput, line);
-
-    while (std::getline(nodeInput, line)) {
-        std::stringstream ss(line);
-
-        std::string idString;
-        std::string latitudeString;
-        std::string longitudeString;
-
-        std:getline(ss, idString, ',');
-        std:getline(ss, latitudeString, ',');
-        std:getline(ss, longitudeString, ',');
-
-        int64_t osmId = std::stoll(idString);
-        double latitude = std::stod(latitudeString);
-        double longitude = std::stod(longitudeString);
-
-        network.addNode(osmId, latitude, longitude);
-    }
-}
-
-void loadEdges(RoadNetwork network, const std::string& edgesFile) { 
-    std::ifstream edgeInput(edgesFile);
-
-    if (!edgeInput) {
-        throw std::runtime_error("Could not open edges file: " + edgesFile);
+        fields.push_back(field);
+        return fields;
     }
 
-    std::string line;
+    bool parseBool(const std::string& value) {
 
-    // skip header
-    std::getline(edgeInput, line);
+        return value == "True" ||
+               value == "true" ||
+               value == "1";
+    }
 
-    while (std::getline(edgeInput, line)) {
-        std::stringstream ss(line);
+    void loadNodes(RoadNetwork& network, const std::string& nodesFile) {
 
-        std::string sourceString;
-        std::string targetString;
-        std::string lengthString;
-        std::string highwayString;
-        std::string speedString;
-        std::string onewayString;
-        std::string nameString;
+        std::ifstream nodeInput(nodesFile);
 
-        std::getline(ss, sourceString, ',');
-        std::getline(ss, targetString, ',');
-        std::getline(ss, lengthString, ',');
-        std::getline(ss, highwayString, ',');
-        std::getline(ss, speedString, ',');
-        std::getline(ss, onewayString, ',');
-        std::getline(ss, nameString, ',');
+        if (!nodeInput) throw std::runtime_error("Could not open nodes file: " + nodesFile );
 
-        int64_t sourceOsmId = std::stoll(sourceString);
-        int64_t targetOsmId = std::stoll(targetString);
+        std::string line;
 
-        double lengthMetres = std::stod(lengthString);
-        float distanceMiles = static_cast<float>(lengthMetres / METRES_PER_MILE);
+        // Skip header
+        std::getline(nodeInput, line);
 
-        float speedLimit = std::stof(speedString);
+        while (std::getline(nodeInput, line)) {
 
-        bool oneway = parseBool(onewayString);
+            std::vector<std::string> fields = parseCsvLine(line);
 
-        std::string name = removeQuotes(nameString);
+            if (fields.size() != 3) throw std::runtime_error("Invalid node CSV row: expected 3 fields");
 
-        std::uint32_t source = network.getNodeIndex(sourceOsmId);
-        std::uint32_t target = network.getNodeIndex(targetOsmId);
+            std::int64_t osmId = std::stoll(fields[0]);
+            double latitude = std::stod(fields[1]);
+            double longitude = std::stod(fields[2]);
 
-        network.addEdge(source, RoadEdge{
-            .destination = target,
-            .name = name,
-            .distance = distanceMiles,
-            .speedLimit = speedLimit
-        });
+            network.addNode(osmId, latitude, longitude);
+        }
+    }
 
-        if (!oneway) {
-            network.addEdge(target, RoadEdge{
-                .destination = source,
+    void loadEdges(RoadNetwork& network, const std::string& edgesFile) {
+
+        std::ifstream edgeInput(edgesFile);
+
+        if (!edgeInput) {
+            throw std::runtime_error("Could not open edges file: " + edgesFile);
+        }
+
+        std::string line;
+
+        // Skip header
+        std::getline(edgeInput, line);
+
+        while (std::getline(edgeInput, line)) {
+            std::vector<std::string> fields = parseCsvLine(line);
+
+            if (fields.size() != 7) throw std::runtime_error("Invalid edge CSV row: expected 7 fields");
+
+            // CSV format:
+            // source,target,name,length_m,highway,speed_mph,oneway
+
+            std::int64_t sourceOsmId = std::stoll(fields[0]);
+            std::int64_t targetOsmId = std::stoll(fields[1]);
+
+            std::string name = fields[2];
+
+            double lengthMetres = std::stod(fields[3]);
+
+            std::string highway = fields[4];
+
+            float speedLimit = std::stof(fields[5]);
+
+            bool oneway = parseBool(fields[6]);
+
+            if (!network.containsNode(sourceOsmId)) throw std::runtime_error("Edge references missing source node: " + std::to_string(sourceOsmId));
+            if (!network.containsNode(targetOsmId)) throw std::runtime_error("Edge references missing target node: " + std::to_string(targetOsmId));
+
+            std::uint32_t source = network.getNodeIndex(sourceOsmId);
+            std::uint32_t target = network.getNodeIndex(targetOsmId);
+
+            float distanceMiles = static_cast<float>(lengthMetres / METRES_PER_MILE);
+
+            network.addEdge(source, RoadEdge{
+                .destination = target,
                 .name = name,
                 .distance = distanceMiles,
                 .speedLimit = speedLimit
             });
+
+            if (!oneway) {
+
+                network.addEdge(target, RoadEdge{
+                    .destination = source,
+                    .name = name,
+                    .distance = distanceMiles,
+                    .speedLimit = speedLimit
+                });
+
+            }
         }
     }
 }
 
 RoadNetwork loadOsmNetwork(const std::string& nodesFile, const std::string& edgesFile) {
+
     RoadNetwork network;
 
     loadNodes(network, nodesFile);
