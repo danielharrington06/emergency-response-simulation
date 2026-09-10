@@ -19,7 +19,15 @@ def get_facility_type(row):
 
     return None
 
-def find_nearest_node(latitude, longitude, node_latitudes, node_longitudes, node_ids):
+def find_nearest_node(
+    latitude,
+    longitude,
+    node_latitudes,
+    node_longitudes,
+    node_ids
+):
+    earth_radius_m = 6_371_000
+
     latitude_radians = np.radians(latitude)
     node_latitudes_radians = np.radians(node_latitudes)
 
@@ -31,18 +39,25 @@ def find_nearest_node(latitude, longitude, node_latitudes, node_longitudes, node
         node_longitudes - longitude
     )
 
-    x = (
-        longitude_difference
-        * np.cos((node_latitudes_radians + latitude_radians) / 2)
+    a = (
+        np.sin(latitude_difference / 2) ** 2
+        + np.cos(latitude_radians)
+        * np.cos(node_latitudes_radians)
+        * np.sin(longitude_difference / 2) ** 2
     )
 
-    y = latitude_difference
+    distances = (
+        2
+        * earth_radius_m
+        * np.arcsin(np.sqrt(a))
+    )
 
-    distances_squared = x * x + y * y
+    nearest_index = np.argmin(distances)
 
-    nearest_index = np.argmin(distances_squared)
-
-    return node_ids[nearest_index]
+    return (
+        node_ids[nearest_index],
+        distances[nearest_index]
+    )
 
 def main():
     print(f"Loading OSM data: {OSM_FILE}")
@@ -100,7 +115,7 @@ def main():
         longitude = point.x
         latitude = point.y
 
-        nearest_node_id = find_nearest_node(
+        nearest_node_id, road_node_distance = find_nearest_node(
             latitude,
             longitude,
             node_latitudes,
@@ -120,6 +135,7 @@ def main():
             "latitude": latitude,
             "longitude": longitude,
             "road_node_id": nearest_node_id,
+            "road_node_distance_m": road_node_distance,
         })
 
     output = pd.DataFrame(processed_facilities)
@@ -139,6 +155,12 @@ def main():
 
     print("\nFacilities by type:")
     print(output["type"].value_counts())
+
+    print("\nRoad-node distance statistics:")
+
+    print(
+        output["road_node_distance_m"].describe()
+    )
 
 
 if __name__ == "__main__":
