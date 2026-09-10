@@ -1,5 +1,6 @@
 from pathlib import Path
 from pyrosm import OSM
+import math
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,7 +32,7 @@ def parse_speed(value):
 
     value = str(value).strip().lower()
 
-    if not value:
+    if not value or value == "nan":
         return DEFAULT_SPEED_MPH
 
     # handle values such as "70 mph"
@@ -39,7 +40,11 @@ def parse_speed(value):
         value = value[:-3].strip()
 
     try:
-        return float(value)
+        speed = float(value)
+        if math.isfinite(speed):
+            return DEFAULT_SPEED_MPH
+        
+        return speed
     except ValueError:
         return DEFAULT_SPEED_MPH
 
@@ -50,7 +55,7 @@ def parse_oneway(value):
 
     value = str(value).strip().lower()
 
-    if value in ["yes", "no", "1"]:
+    if value in ["yes", "1"]:
         return True
 
     return False

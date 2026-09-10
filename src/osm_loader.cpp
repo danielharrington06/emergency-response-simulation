@@ -139,7 +139,6 @@ RoadNetwork loadOsmNetwork(const std::string& nodesFile, const std::string& edge
     RoadNetwork network;
 
     loadNodes(network, nodesFile);
-
     loadEdges(network, edgesFile);
 
     return network;

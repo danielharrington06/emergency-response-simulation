@@ -1,21 +1,27 @@
 #include "../include/test_network.hpp"
 #include "../include/router.hpp"
 #include "../include/test_dispatch.hpp"
+#include "../include/osm_loader.hpp"
 
 #include <iostream>
 
 int main() {
     std::cout << "Emergency Response Simulation\n";
 
-    RoadNetwork network = createTestNetwork();
+    RoadNetwork network = loadOsmNetwork(
+        "data/processed/nodes.csv",
+        "data/processed/edges.csv"
+    );
+    
+    std::cout << "\n-> Loaded road network\n";
 
-    Dispatch dispatch = createMoreIncidentsTest(network);
+    std::cout << "Nodes: "
+              << network.nodeCount()
+              << '\n';
 
-    std::cout << "\n-> Calculating Optimal Vehicle-Incident Assignments...\n";
-    dispatch.findOptimalAssignment();
-
-    dispatch.printVehicles();
-    dispatch.printIncidents();
+    std::cout << "Directed edges: "
+              << network.edgeCount()
+              << '\n';
 
     return 0;
 }

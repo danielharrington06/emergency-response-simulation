@@ -51,6 +51,7 @@ clang++ -std=c++17 \
     src/test_dispatch.cpp \
     src/incident.cpp \
     src/emergency_vehicle.cpp \
+    src/osm_loader.cpp \
     -framework Metal \
     -framework Foundation \
     -o bin/main
