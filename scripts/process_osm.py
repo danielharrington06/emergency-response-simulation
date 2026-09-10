@@ -48,7 +48,7 @@ def parse_oneway(value):
     if value is None:
         return False
 
-    value = str(value).strip.lower()
+    value = str(value).strip().lower()
 
     if value in ["yes", "no", "1"]:
         return True
@@ -94,7 +94,7 @@ def main():
         "u": "source",
         "v": "target",
         "length": "length_m",
-        "speed": "speed_mph",
+        "maxspeed": "speed_mph",
     })
 
     processed_edges["speed_mph"] = (
