@@ -56,7 +56,7 @@ struct Route {
 
             std::cout << "Distance: "
                     << totalDistance
-                    << " km\n";
+                    << " miles\n";
 
             std::cout << "Travel time: "
                     << totalTravelTime

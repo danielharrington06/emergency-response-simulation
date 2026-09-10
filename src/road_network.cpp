@@ -80,8 +80,8 @@ void RoadNetwork::printNetwork() const {
         std::cout << "\tEdges:\n";
         for (const RoadEdge& edge : adjacency.at(i)) {
             std::cout << "\t\tDestination: Node " << edge.destination 
-            << "\t Distance: " << edge.distance << " km" 
-            << "\t Speed Limit: " << edge.speedLimit << " km/h\n";
+            << "\t Distance: " << edge.distance << " miles" 
+            << "\t Speed Limit: " << edge.speedLimit << " mph\n";
         }
         std::cout << '\n';
     }
