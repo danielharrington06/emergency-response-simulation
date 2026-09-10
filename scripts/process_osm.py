@@ -23,6 +23,39 @@ ROAD_TYPES = {
     "busway",
 }
 
+DEFAULT_SPEED_MPH = 30
+
+def parse_speed(value):
+    if value is None:
+        return DEFAULT_SPEED_MPH
+
+    value = str(value).strip().lower()
+
+    if not value:
+        return DEFAULT_SPEED_MPH
+
+    # handle values such as "70 mph"
+    if value.endswith("mph"):
+        value = value[:-3].strip()
+
+    try:
+        return float(value)
+    except ValueError:
+        return DEFAULT_SPEED_MPH
+
+
+def parse_oneway(value):
+    if value is None:
+        return False
+
+    value = str(value).strip.lower()
+
+    if value in ["yes", "no", "1"]:
+        return True
+
+    return False
+
+
 def main():
     print(f"Loading: {OSM_FILE}")
 
@@ -60,10 +93,19 @@ def main():
     processed_edges = processed_edges.rename(columns={
         "u": "source",
         "v": "target",
-        "length": "length_miles",
+        "length": "length_m",
+        "speed": "speed_mph",
     })
 
-    processed_edges["length_miles"] /= 1609.344 # change from metres to miles
+    processed_edges["speed_mph"] = (
+        processed_edges["speed_mph"]
+        .apply(parse_speed)
+    )
+
+    processed_edges["oneway"] = (
+        processed_edges["oneway"]
+        .apply(parse_oneway)
+    )
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
