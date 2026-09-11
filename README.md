@@ -12,8 +12,10 @@ Assigns all high priority incidents, then all medium priority incidents, then al
 
 Assignment is done by minimising total time for incidents of the current severity for the available ambulances. A deliberate result of this is that a closer medium severity incident cannot be assigned over a further high severity incident. I considered using a combined metric to balance this, but thought that arbitrary weights would be further from the desired outcome at this point.
 
-## Data
-OpenStreetMap data was used. I used a county near me in the UK. To use OSM data, place the `.osm.pbf` file in `osm/`, process it with the python code.
+## Data
+OpenStreetMap is used for a real road network. I used a county near me in the UK. To use OSM data, place the `.osm.pbf` file under `data/osm/`, create a `config.py` file with the format of c`onfig.example.py` (with the correct filename) then process it with the python scripts.
+
+`process_osm.py` produces the road network, represented by `nodes.csv` and `edges.csv`. `process_facilities.py` produced the facilities in `facilities.csv`, storing data on hospitals, ambulance stations, fire stations and police stations.
 
 ## Project Structure
 ```vbnet
