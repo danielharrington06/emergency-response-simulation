@@ -51,6 +51,18 @@ uint32_t Dispatch::addIncident(uint32_t location, IncidentType type, IncidentSev
     return index;
 }
 
+void Dispatch::addVehicles(const std::vector<EmergencyVehicle>& newVehicles) {
+    for (const EmergencyVehicle& vehicle : newVehicles) {
+        vehicles.push_back(vehicle);
+    }
+}
+
+void Dispatch::addIncidents(const std::vector<Incident>& newIncidents) {
+    for (const Incident& incident : newIncidents) {
+        incidents.push_back(incident);
+    }
+}
+
 const EmergencyVehicle& Dispatch::getVehicle(uint32_t id) const {
     return vehicles.at(id);
 }

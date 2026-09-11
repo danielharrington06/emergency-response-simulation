@@ -25,12 +25,14 @@ private:
     std::vector<uint32_t> buildAvailableVehicles();
 
 public:
-    Dispatch(RoadNetwork rn) {
-        network = rn;
-    }
+    Dispatch(const RoadNetwork& rn)
+        : network(rn) {}
 
     uint32_t addVehicle(uint32_t location, VehicleType type);
     uint32_t addIncident(uint32_t location, IncidentType, IncidentSeverity severity);
+
+    void addVehicles(const std::vector<EmergencyVehicle>& newVehicles);
+    void addIncidents(const std::vector<Incident>& newIncidents);
 
     const EmergencyVehicle& getVehicle(uint32_t id) const;
     const Incident& getIncident(uint32_t id) const;
