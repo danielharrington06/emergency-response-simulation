@@ -17,6 +17,9 @@ OpenStreetMap is used for a real road network. I used a county near me in the UK
 
 `process_osm.py` produces the road network, represented by `nodes.csv` and `edges.csv`. `process_facilities.py` produced the facilities in `facilities.csv`, storing data on hospitals, ambulance stations, fire stations and police stations.
 
+## Benchmarking
+To give reliable results, benchmarking should be carried out on the same seed.
+
 ## Project Structure
 ```vbnet
 COMP0002-C-Coursework/
@@ -54,6 +57,7 @@ clang++ -std=c++17 \
     src/incident.cpp \
     src/emergency_vehicle.cpp \
     src/osm_loader.cpp \
+    src/scenario_generator.cpp \
     -framework Metal \
     -framework Foundation \
     -o bin/main
