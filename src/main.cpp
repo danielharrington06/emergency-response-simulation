@@ -9,8 +9,8 @@
 const unsigned int incidentSeed = 12345;
 const unsigned int vehicleSeed = 67890;
 
-const unsigned int incidentCount = 10;
-const unsigned int vehicleCount = 10;
+// const unsigned int incidentCount = 10;
+// const unsigned int vehicleCount = 10;
 
 const unsigned int DEFAULT_COUNT = 10;
 
@@ -57,8 +57,6 @@ int main(int argc, char *argv[]) {
     auto start = std::chrono::steady_clock::now();
 
     dispatch.findOptimalAssignment();
-    // Route route = findRoute(network, 1, 271400);
-    // std::cout << "Nodes visited: "<< route.nodesVisited << '\n';
 
     auto end = std::chrono::steady_clock::now();
 
