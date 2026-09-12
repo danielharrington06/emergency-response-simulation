@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <vector>
 
-std::vector<Assignment> findOptimalAssignment(const std::vector<std::vector<double>>& costs) {
+std::vector<Assignment> findOptimalAssignmentHungarian(const std::vector<std::vector<double>>& costs) {
     if (costs.empty()) {
         return {};
     }

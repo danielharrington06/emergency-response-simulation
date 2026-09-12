@@ -2,6 +2,7 @@
 #include "../include/osm_loader.hpp"
 #include "../include/scenario_generator.hpp"
 #include "../include/dispatch.hpp"
+#include "../include/assignment.hpp"
 
 #include <iostream>
 #include <iomanip>
@@ -20,7 +21,6 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         count = std::stoul(argv[1]);
     }
-
 
     // setup - not timed
 

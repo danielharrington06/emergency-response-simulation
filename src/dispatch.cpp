@@ -1,6 +1,7 @@
 #include "../include/dispatch.hpp"
 #include "../include/router.hpp"
 #include "../include/incident.hpp"
+#include "../include/assignment.hpp"
 
 #include <iostream>
 #include <string>
@@ -114,75 +115,32 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
 }
 
 void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) {
-    // availableVehicles is a list of actual vehicle Id's, same for incidentsOfThisPriority
-    // concept here: exhaustive search to find way to minimise total response time, but 'pad' the matrix 
-    //.. (not actually, just conceptually through index checks) and any padded values would be unassigned vehicles/incidents
-    //.. so are given time of 0
+    // previously used exhuastive search but this was factorial time efficiency, so had to replace with ...
+    //.. with hungarian assignment algorithm in assignment.cpp
 
-    if (availableVehicles.empty() || incidentsOfThisPriority.empty()) {
+    if (availableVehicles.empty() ||
+        incidentsOfThisPriority.empty()) {
         return;
     }
 
     std::vector<std::vector<double>> responseTimes = calculateResponseTimes(availableVehicles, incidentsOfThisPriority);
 
-    const size_t assignmentSize = std::max(availableVehicles.size(), incidentsOfThisPriority.size());
-    std::vector<uint32_t> assignmentOrder(assignmentSize);
+    std::vector<Assignment> assignments = findOptimalAssignmentHungarian(responseTimes);
 
-    for (uint32_t i = 0; i < assignmentSize; i++) {
-        assignmentOrder.at(i) = i;
-    }
+    for (const Assignment& assignment : assignments) {
+        uint32_t vehicleId = availableVehicles.at(assignment.vehicleIndex);
 
-    double bestTotalTime = std::numeric_limits<double>::infinity();
-    size_t bestAssignedCount = 0; // this is needed so that the code doesnt minimise total time by not assigning
-    std::vector<DispatchAssignment> bestAssignment;
+        uint32_t incidentId = incidentsOfThisPriority.at(assignment.incidentIndex);
 
-    do {
-        double totalTime = 0.0;
-        size_t assignedCount = 0;
-        std::vector<DispatchAssignment> currentAssignment;
+        double responseTime = responseTimes.at(assignment.vehicleIndex).at(assignment.incidentIndex);
 
-        for(size_t i = 0; i < assignmentSize; i++) {
-            // no real vehicle exists at this position
-            if (i >= availableVehicles.size()) {
-                continue;
-            }
-            // no real incident exists at this index
-            if (assignmentOrder.at(i) >= incidentsOfThisPriority.size()) {
-                continue;
-            }
+        vehicleAssignments[vehicleId] = {
+            .vehicle = vehicleId,
+            .incident = incidentId,
+            .responseTime = responseTime
+        };
 
-            uint32_t vehicleId = availableVehicles.at(i);
-            uint32_t incidentIndex = assignmentOrder.at(i);
-            double responseTime = responseTimes.at(i).at(incidentIndex);
-
-            // this vehicle cannot reach this incident
-            if (!std::isfinite(responseTime)) {
-                totalTime = std::numeric_limits<double>::infinity();
-                break;
-            }
-            totalTime += responseTime;
-
-            assignedCount++;
-
-            currentAssignment.push_back({
-                vehicleId,
-                incidentsOfThisPriority.at(incidentIndex),
-                responseTime
-            });
-        }
-
-        // aim: maximise the number of incidents assigned, then minimise total response time
-        if (assignedCount > bestAssignedCount || (assignedCount == bestAssignedCount && totalTime < bestTotalTime)) {
-            bestAssignedCount = assignedCount;
-            bestTotalTime = totalTime;
-            bestAssignment = currentAssignment;
-        }
-    } while (std::next_permutation(assignmentOrder.begin(), assignmentOrder.end()));
-
-    // store the best assignment and update vehicle status
-    for (const DispatchAssignment& assignment : bestAssignment) {
-        vehicleAssignments[assignment.vehicle] = assignment;
-        vehicles.at(assignment.vehicle).status = VehicleStatus::Dispatched;
+        vehicles.at(vehicleId).status = VehicleStatus::Dispatched;
     }
 }
 

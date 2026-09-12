@@ -8,4 +8,4 @@ struct Assignment {
     std::size_t incidentIndex;
 };
 
-std::vector<Assignment> findOptimalAssignment(const std::vector<std::vector<double>>& costs);
+std::vector<Assignment> findOptimalAssignmentHungarian(const std::vector<std::vector<double>>& costs);

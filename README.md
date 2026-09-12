@@ -58,6 +58,7 @@ clang++ -std=c++17 \
     src/emergency_vehicle.cpp \
     src/osm_loader.cpp \
     src/scenario_generator.cpp \
+    src/assignment.cpp \
     -framework Metal \
     -framework Foundation \
     -o bin/main
