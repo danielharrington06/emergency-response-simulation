@@ -71,39 +71,44 @@ const Incident& Dispatch::getIncident(uint32_t id) const {
     return incidents.at(id);
 }
 
-std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) const { // calculates response times for the given vehicles and incidents
-    // may want to change parameter names to just vehicles and incidents
-
+std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) const {
     std::vector<std::vector<double>> responseTimes(availableVehicles.size(), std::vector<double>(incidentsOfThisPriority.size()));
 
     const double infinity = std::numeric_limits<double>::infinity();
 
-    // loop over vehicles, then incidents to get response times
     for (size_t i = 0; i < availableVehicles.size(); i++) {
         uint32_t vehicleId = availableVehicles.at(i);
 
         for (size_t j = 0; j < incidentsOfThisPriority.size(); j++) {
             uint32_t incidentId = incidentsOfThisPriority.at(j);
 
-            Route route = findRoute(network, vehicles.at(vehicleId).location, incidents.at(incidentId).location);
+            const EmergencyVehicle& vehicle = vehicles.at(vehicleId);
 
-            // make response time infinite if vehicle is incompatible
-            if (!isVehicleCompatible(vehicles.at(vehicleId).type, incidents.at(incidentId).type)) {
+            const Incident& incident = incidents.at(incidentId);
+
+            // Do not calculate a route if this vehicle
+            // can never respond to this incident.
+            if (!isVehicleCompatible( vehicle.type, incident.type )) {
                 responseTimes.at(i).at(j) = infinity;
                 continue;
             }
-            // if route found (and not incompatible) store actual response time
-            else if (route.status == RouteStatus::Found) {
+
+            Route route = findRoute(
+                network,
+                vehicle.location,
+                incident.location
+            );
+
+            if (route.status == RouteStatus::Found) {
                 responseTimes.at(i).at(j) = route.totalTravelTime;
             }
-            // route is unreachable (rare to execute as would require no route between the vehicle and incident)
             else {
                 responseTimes.at(i).at(j) = infinity;
             }
         }
     }
     // for debugging - remove for larger networks and incident-vehicle counts
-    printResponseTimesMatrix(responseTimes);
+    //printResponseTimesMatrix(responseTimes);
 
     return responseTimes;
 }

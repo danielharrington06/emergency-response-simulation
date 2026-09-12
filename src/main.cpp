@@ -33,7 +33,7 @@ int main() {
               << network.edgeCount()
               << '\n';
 
-    std::vector<Incident> incidents = generateRandomIncidents(network, incidentSeed, incidentSeed);
+    std::vector<Incident> incidents = generateRandomIncidents(network, incidentCount, incidentSeed);
     std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, vehicleCount, vehicleSeed);
 
     Dispatch dispatch(network);
@@ -46,9 +46,9 @@ int main() {
 
     auto start = std::chrono::steady_clock::now();
 
-    //dispatch.findOptimalAssignment();
-    Route route = findRoute(network, 1, 271400);
-    std::cout << "Nodes visited: "<< route.nodesVisited << '\n';
+    dispatch.findOptimalAssignment();
+    // Route route = findRoute(network, 1, 271400);
+    // std::cout << "Nodes visited: "<< route.nodesVisited << '\n';
 
     auto end = std::chrono::steady_clock::now();
 
