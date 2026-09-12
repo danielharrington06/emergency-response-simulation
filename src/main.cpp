@@ -4,12 +4,13 @@
 #include "../include/dispatch.hpp"
 
 #include <iostream>
+#include <iomanip>
 
 const unsigned int incidentSeed = 12345;
 const unsigned int vehicleSeed = 67890;
 
-const unsigned int incidentCount = 100;
-const unsigned int vehicleCount = 100;
+const unsigned int incidentCount = 3;
+const unsigned int vehicleCount = 3;
 
 int main() {
 
@@ -39,6 +40,8 @@ int main() {
     dispatch.addVehicles(vehicles);
     dispatch.addIncidents(incidents);
 
+    std::cout << "\n-> Running Simulation on CPU\n";
+
     // benchmark - timed
 
     auto start = std::chrono::steady_clock::now();
@@ -46,6 +49,13 @@ int main() {
     dispatch.findOptimalAssignment();
 
     auto end = std::chrono::steady_clock::now();
+
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+
+    std::cout << std::fixed << std::setprecision(3)
+            << "Simulation time: "
+            << elapsed.count()
+            << " ms\n";
 
     return 0;
 }

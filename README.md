@@ -50,10 +50,8 @@ COMP0002-C-Coursework/
 clang++ -std=c++17 \
     src/main.cpp \
     src/road_network.cpp \
-    src/test_network.cpp \
     src/router.cpp \
     src/dispatch.cpp \
-    src/test_dispatch.cpp \
     src/incident.cpp \
     src/emergency_vehicle.cpp \
     src/osm_loader.cpp \
