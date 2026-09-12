@@ -46,7 +46,9 @@ int main() {
 
     auto start = std::chrono::steady_clock::now();
 
-    dispatch.findOptimalAssignment();
+    //dispatch.findOptimalAssignment();
+    Route route = findRoute(network, 1, 271400);
+    std::cout << "Nodes visited: "<< route.nodesVisited << '\n';
 
     auto end = std::chrono::steady_clock::now();
 

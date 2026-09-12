@@ -18,19 +18,35 @@ struct CompareQueueNode { // needed to tell the queue to prioritise the least f 
     }
 };
 
-double heuristic(const RoadNetwork& network, uint32_t current, uint32_t destination) { // shortest time, as calculated by distance / max speed
-    // will want to use geographical projection when on a large enough map
+double heuristic(const RoadNetwork& network, uint32_t current, uint32_t destination) {
     const RoadNode& currentNode = network.getNode(current);
+
     const RoadNode& destinationNode = network.getNode(destination);
 
-    double dx = currentNode.latitude - destinationNode.latitude;
-    double dy = currentNode.longitude - destinationNode.longitude;
+    constexpr double PI = 3.14159265358979323846;
+    constexpr double EARTH_RADIUS_MILES = 3958.7613;    
+    constexpr double MAX_SPEED_MPH = 70.0;
 
-    double distance = std::sqrt(dx*dx + dy*dy);
+    double latitude1 = currentNode.latitude * PI / 180.0;
 
-    const double max_speed = 113; //km/h
+    double latitude2 = destinationNode.latitude * PI / 180.0;
 
-    return distance/max_speed * 60.0;
+    double latitudeDifference = (destinationNode.latitude - currentNode.latitude) * PI / 180.0;
+
+    double longitudeDifference = (destinationNode.longitude - currentNode.longitude) * PI / 180.0;
+
+    double a =
+        std::sin(latitudeDifference / 2.0)
+        * std::sin(latitudeDifference / 2.0)
+        +
+        std::cos(latitude1)
+        * std::cos(latitude2)
+        * std::sin(longitudeDifference / 2.0)
+        * std::sin(longitudeDifference / 2.0);
+
+    double distance = 2.0 * EARTH_RADIUS_MILES * std::asin(std::sqrt(a));
+
+    return distance / MAX_SPEED_MPH * 60.0;
 }
 
 Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination) { // uses A* algorithm to find route
