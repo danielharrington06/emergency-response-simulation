@@ -9,10 +9,18 @@
 const unsigned int incidentSeed = 12345;
 const unsigned int vehicleSeed = 67890;
 
-const unsigned int incidentCount = 3;
-const unsigned int vehicleCount = 3;
+const unsigned int incidentCount = 10;
+const unsigned int vehicleCount = 10;
 
-int main() {
+const unsigned int DEFAULT_COUNT = 10;
+
+int main(int argc, char *argv[]) {
+    unsigned int count = DEFAULT_COUNT;
+
+    if (argc == 2) {
+        count = std::stoul(argv[1]);
+    }
+
 
     // setup - not timed
 
@@ -33,14 +41,16 @@ int main() {
               << network.edgeCount()
               << '\n';
 
-    std::vector<Incident> incidents = generateRandomIncidents(network, incidentCount, incidentSeed);
-    std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, vehicleCount, vehicleSeed);
+    std::vector<Incident> incidents = generateRandomIncidents(network, count, incidentSeed);
+    std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, count, vehicleSeed);
 
     Dispatch dispatch(network);
     dispatch.addVehicles(vehicles);
     dispatch.addIncidents(incidents);
 
     std::cout << "\n-> Running Simulation on CPU\n";
+    std::cout << "Vehicles: " << dispatch.vehicleCount() << '\n';
+    std::cout << "Incidents: " << dispatch.incidentCount() << '\n';
 
     // benchmark - timed
 

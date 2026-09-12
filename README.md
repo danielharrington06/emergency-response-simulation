@@ -10,6 +10,8 @@ $$
 ## Incident Assignment: `dispatch.cpp`
 Assigns all high priority incidents, then all medium priority incidents, then all low priority incidents, minimising total time at each stage.
 
+The current approach is exhaustive, maximising number of assignments, then minimising total time. However, this has time complexity $O(n!)$ and for 10 incidents and vehicles, takes 1.7 seconds, for 11, takes 7 seconds, so is clearly intractable and unsuitable for this problem.
+
 Assignment is done by minimising total time for incidents of the current severity for the available ambulances. A deliberate result of this is that a closer medium severity incident cannot be assigned over a further high severity incident. I considered using a combined metric to balance this, but thought that arbitrary weights would be further from the desired outcome at this point.
 
 ## Data
