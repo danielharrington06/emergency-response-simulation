@@ -30,6 +30,7 @@ public:
     void addEdge(uint32_t source, const RoadEdge& edge);
 
     const RoadNode& getNode(uint32_t index) const;
+    const RoadEdge& getEdge(uint32_t source, uint32_t target);
     const std::vector<RoadNode>& getNodes() const;
     const std::vector<RoadEdge>& getNeighbours(uint32_t index) const;
 

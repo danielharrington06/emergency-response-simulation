@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <iostream>
 #include <optional>
+#include <stdexcept>
 
 // construction
 
@@ -31,6 +32,16 @@ void RoadNetwork::addEdge(uint32_t source, const RoadEdge& edge) {
 
 const RoadNode& RoadNetwork::getNode(uint32_t index) const {
     return nodes.at(index);
+}
+
+const RoadEdge& RoadNetwork::getEdge(uint32_t source, uint32_t target) {
+    std::vector<RoadEdge>& adjacentEdges = adjacency.at(source);
+    for (RoadEdge& edge : adjacentEdges) {
+        if (edge.destination == target) {
+            return edge;
+        }
+    }
+    throw std::runtime_error("No edge found\n");
 }
 
 const std::vector<RoadNode>& RoadNetwork::getNodes() const {
