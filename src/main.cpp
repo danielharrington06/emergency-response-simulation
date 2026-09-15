@@ -4,6 +4,7 @@
 #include "../include/dispatch.hpp"
 #include "../include/assignment.hpp"
 #include "../include/gpu_graph.hpp"
+#include "../include/metal_router.hpp"
 
 #include <iostream>
 #include <iomanip>
@@ -42,7 +43,11 @@ int main(int argc, char *argv[]) {
               << network.edgeCount()
               << '\n';
 
-    testGPUGraph(network);
+    GPUGraph gpuGraph = createGPUGraph(network);
+
+    MetalRouter metalRouter(gpuGraph);
+
+    metalRouter.testGraph();
 
     // std::vector<Incident> incidents = generateRandomIncidents(network, count, incidentSeed);
     // std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, count, vehicleSeed);

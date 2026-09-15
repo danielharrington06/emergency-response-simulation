@@ -21,6 +21,9 @@ OpenStreetMap is used for a real road network. I used a county near me in the UK
 
 `process_osm.py` produces the road network, represented by `nodes.csv` and `edges.csv`. `process_facilities.py` produced the facilities in `facilities.csv`, storing data on hospitals, ambulance stations, fire stations and police stations.
 
+## Metal GPU Implementation
+For the graph network to work efficiently on the GPU, it needs fixed length arrays with reliable offsets rather than ragged `<vector>` objects as in the `road_network` implementation. `gpu_graph.cpp` formats the graph through a CSR conversion, to setup for the Metal GPU code.
+
 ## Benchmarking
 To give reliable results, benchmarking should be carried out on the same seed.
 
@@ -62,6 +65,7 @@ clang++ -std=c++17 \
     src/scenario_generator.cpp \
     src/assignment.cpp \
     src/gpu_graph.cpp \
+    src/metal_router.mm \
     -framework Metal \
     -framework Foundation \
     -o bin/main
