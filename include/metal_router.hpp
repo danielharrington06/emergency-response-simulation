@@ -5,8 +5,17 @@
 #include <cstdint>
 
 class MetalRouter {
+
 public:
     MetalRouter(const GPUGraph& graph);
+    ~MetalRouter();
 
-    void testGraph();
+    float route(
+        std::uint32_t sourceNode,
+        std::uint32_t targetNode
+    );
+
+private:
+    struct MetalState;
+    MetalState* state;
 };

@@ -31,7 +31,7 @@ kernel void relax_frontier(
     for (uint edge = start; edge < end; ++edge) {
 
         uint destination = edgeDestinations[edge];
-        uint edgeTime = uint(edgeTravelTimes[edge] * 1000.0f);
+        uint edgeTime = uint(edgeTravelTimes[edge] * 1000.0f + 0.5f); // +0.5f causes rounding behaviour
 
         uint newTime = currentTime + edgeTime;
         uint oldTime = atomic_fetch_min_explicit(&travelTimes[destination], newTime, memory_order_relaxed);

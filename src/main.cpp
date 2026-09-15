@@ -18,10 +18,10 @@ const unsigned int vehicleSeed = 67890;
 const unsigned int DEFAULT_COUNT = 10;
 
 int main(int argc, char *argv[]) {
-    unsigned int count = DEFAULT_COUNT;
+    unsigned int target = 10;
 
     if (argc == 2) {
-        count = std::stoul(argv[1]);
+        target = std::stoul(argv[1]);
     }
 
     // setup - not timed
@@ -46,6 +46,8 @@ int main(int argc, char *argv[]) {
     GPUGraph gpuGraph = createGPUGraph(network);
 
     MetalRouter metalRouter(gpuGraph);
+    float time = metalRouter.route(0, target);
+    std::cout << "Time: " << time/60 << "mins\n";
 
     // std::vector<Incident> incidents = generateRandomIncidents(network, count, incidentSeed);
     // std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, count, vehicleSeed);
