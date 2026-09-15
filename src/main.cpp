@@ -47,8 +47,6 @@ int main(int argc, char *argv[]) {
 
     MetalRouter metalRouter(gpuGraph);
 
-    metalRouter.testGraph();
-
     // std::vector<Incident> incidents = generateRandomIncidents(network, count, incidentSeed);
     // std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, count, vehicleSeed);
 

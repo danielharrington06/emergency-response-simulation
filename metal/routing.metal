@@ -17,8 +17,8 @@ kernel void relax_frontier(
     device const uint* edgeDestinations [[buffer(1)]],
     device const float* edgeTravelTimes [[buffer(2)]],
     device const uint* frontier [[buffer(3)]],
-    device const uint* travelTimes [[buffer(4)]],
-    device atomic_uint* nextTravelTimes [[buffer(5)]],
+    device atomic_uint* travelTimes [[buffer(4)]],
+    device atomic_uint* improved [[buffer(5)]],
     uint frontierIndex [[thread_position_in_grid]]
 ) {
     uint node = frontier[frontierIndex];
@@ -26,15 +26,18 @@ kernel void relax_frontier(
     uint start = nodeOffsets[node];
     uint end = nodeOffsets[node + 1];
 
-    uint currentTime = travelTimes[node];
+    uint currentTime = atomic_load_explicit(&travelTimes[node], memory_order_relaxed);
 
     for (uint edge = start; edge < end; ++edge) {
-        uint destination = edgeDestinations[edge];
 
-        uint edgeTime = uint(edgeTravelTimes[edge] * 1000000.0f);
+        uint destination = edgeDestinations[edge];
+        uint edgeTime = uint(edgeTravelTimes[edge] * 1000.0f);
 
         uint newTime = currentTime + edgeTime;
+        uint oldTime = atomic_fetch_min_explicit(&travelTimes[destination], newTime, memory_order_relaxed);
 
-        atomic_fetch_min_explicit(&nextTravelTimes[destination], newTime, memory_order_relaxed);
+        if (newTime < oldTime) {
+            atomic_store_explicit(&improved[destination], 1, memory_order_relaxed);
+        }
     }
 }
