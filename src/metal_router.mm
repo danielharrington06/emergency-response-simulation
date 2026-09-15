@@ -16,7 +16,30 @@ MetalRouter::MetalRouter(const GPUGraph& graph) {
     id<MTLCommandQueue> commandQueue = [device newCommandQueue];
 
     if (commandQueue == nil) {
-        throw std::runtime_error("Failed to create command queue");
+        throw std::runtime_error("Failed to create Metal command queue");
+    }
+
+    NSURL* libraryURL = [NSURL fileURLWithPath:@"bin/routing.metallib"];
+
+    id<MTLLibrary> library = [device newLibraryWithURL:libraryURL error:nil];
+
+    if (library == nil) {
+        throw std::runtime_error("Failed to load routing.metallib");
+    }
+
+    id<MTLFunction> function =
+        [library newFunctionWithName:@"calculate_degrees"];
+
+    if (function == nil) {
+        throw std::runtime_error("Failed to find calculate_degrees kernel");
+    }
+
+    id<MTLComputePipelineState> pipeline =
+        [device newComputePipelineStateWithFunction:function
+                                               error:nil];
+
+    if (pipeline == nil) {
+        throw std::runtime_error("Failed to create compute pipeline");
     }
 
     id<MTLBuffer> nodeOffsetsBuffer =
@@ -24,29 +47,71 @@ MetalRouter::MetalRouter(const GPUGraph& graph) {
                             length:graph.nodeOffsets.size() * sizeof(std::uint32_t)
                            options:MTLResourceStorageModeShared];
 
-    id<MTLBuffer> edgeDestinationsBuffer =
-        [device newBufferWithBytes:graph.edgeDestinations.data()
-                            length:graph.edgeDestinations.size() * sizeof(std::uint32_t)
+    id<MTLBuffer> degreesBuffer =
+        [device newBufferWithLength:
+                    graph.nodeOffsets.size() * sizeof(std::uint32_t)
                            options:MTLResourceStorageModeShared];
 
-    id<MTLBuffer> edgeTravelTimesBuffer =
-        [device newBufferWithBytes:graph.edgeTravelTimes.data()
-                            length:graph.edgeTravelTimes.size() * sizeof(float)
-                           options:MTLResourceStorageModeShared];
+    // id<MTLBuffer> edgeDestinationsBuffer =
+    //     [device newBufferWithBytes:graph.edgeDestinations.data()
+    //                         length:graph.edgeDestinations.size() * sizeof(std::uint32_t)
+    //                        options:MTLResourceStorageModeShared];
 
-    if (nodeOffsetsBuffer == nil ||
-        edgeDestinationsBuffer == nil ||
-        edgeTravelTimesBuffer == nil) {
-        throw std::runtime_error("Failed to create Metal graph buffers");
+    // id<MTLBuffer> edgeTravelTimesBuffer =
+    //     [device newBufferWithBytes:graph.edgeTravelTimes.data()
+    //                         length:graph.edgeTravelTimes.size() * sizeof(float)
+    //                       options:MTLResourceStorageModeShared];
+
+    if (nodeOffsetsBuffer == nil || degreesBuffer == nil) {
+        throw std::runtime_error("Failed to create Metal buffers");
     }
 
-    std::cout << "Metal device: " << [device.name UTF8String] << '\n';
+    id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
 
-    std::cout << "Uploaded graph:\n";
+    id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
 
-    std::cout << "Nodes: " << graph.nodeOffsets.size() - 1 << '\n';
+    [encoder setComputePipelineState:pipeline];
 
-    std::cout << "Edges: " << graph.edgeDestinations.size() << '\n';
+    [encoder setBuffer:nodeOffsetsBuffer offset:0 atIndex:0];
+
+    [encoder setBuffer:degreesBuffer offset:0 atIndex:1];
+
+    NSUInteger nodeCount = graph.nodeOffsets.size() - 1;
+
+    [encoder dispatchThreads:
+        MTLSizeMake(nodeCount, 1, 1)
+        threadsPerThreadgroup:
+        MTLSizeMake(pipeline.maxTotalThreadsPerThreadgroup, 1, 1)];
+
+    [encoder endEncoding];
+
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+
+    if (commandBuffer.status == MTLCommandBufferStatusError) {
+        throw std::runtime_error("Metal command buffer failed");
+    }
+
+    const auto* degrees =
+        static_cast<const std::uint32_t*>(degreesBuffer.contents);
+
+    std::cout << "Metal device: "
+              << [device.name UTF8String]
+              << '\n';
+
+    std::cout << "GPU degree test successful\n";
+
+    std::cout << "Node 0 degree: "
+              << degrees[0]
+              << '\n';
+
+    std::cout << "Node 1 degree: "
+              << degrees[1]
+              << '\n';
+
+    std::cout << "Node 2 degree: "
+              << degrees[2]
+              << '\n';
 }
 
 void MetalRouter::testGraph() {

@@ -54,11 +54,11 @@ COMP0002-C-Coursework/
 
 ## Compile and Run
 ```bash
-xcrun -sdk macosx metal \
+xcrun -sdk macosx metal -c \
     metal/routing.metal \
     -o bin/routing.air
 
-xcrun -sdk macosx metallib -c \
+xcrun -sdk macosx metallib \
     bin/routing.air \
     -o bin/routing.metallib
 
