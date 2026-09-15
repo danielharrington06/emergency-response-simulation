@@ -128,8 +128,6 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
                             length:improved.size() * sizeof(std::uint32_t)
                         options:MTLResourceStorageModeShared];
 
-    auto start = std::chrono::steady_clock::now();
-
     while (!frontier.empty()) {
 
         id<MTLBuffer> frontierBuffer =
@@ -196,15 +194,6 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
 
         frontier = std::move(nextFrontier);
     }
-
-    auto end = std::chrono::steady_clock::now();
-
-    std::chrono::duration<double, std::milli> elapsed = end - start;
-
-    std::cout << std::fixed << std::setprecision(3)
-            << "Simulation time: "
-            << elapsed.count()
-            << " ms\n";
 
     const std::uint32_t* results = static_cast<const std::uint32_t*>(travelTimesBuffer.contents);
 

@@ -9,19 +9,24 @@
 #include <iostream>
 #include <iomanip>
 
-const unsigned int incidentSeed = 12345;
-const unsigned int vehicleSeed = 67890;
+// const unsigned int incidentSeed = 12345;
+// const unsigned int vehicleSeed = 67890;
 
 // const unsigned int incidentCount = 10;
 // const unsigned int vehicleCount = 10;
 
-const unsigned int DEFAULT_COUNT = 10;
+// const unsigned int DEFAULT_COUNT = 10;
 
 int main(int argc, char *argv[]) {
+    unsigned int source = 0;
     unsigned int target = 10;
 
     if (argc == 2) {
         target = std::stoul(argv[1]);
+    }
+    if (argc == 3) {
+        source = std::stoul(argv[1]);
+        target = std::stoul(argv[2]);
     }
 
     // setup - not timed
@@ -43,37 +48,36 @@ int main(int argc, char *argv[]) {
               << network.edgeCount()
               << '\n';
 
+    // CPU
+
+    auto CPUstart = std::chrono::steady_clock::now();
+    Route route = findRoute(network, source, target);
+    auto CPUend = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> CPUelapsed = CPUend - CPUstart;
+    std::cout << std::fixed << std::setprecision(3)
+            << "\nCPU Simulation time: "
+            << CPUelapsed.count()
+            << " ms\n";
+
+    std::cout << "Time: " << route.totalTravelTime << "mins\n";
+
+    // GPU
+
     GPUGraph gpuGraph = createGPUGraph(network);
-
     MetalRouter metalRouter(gpuGraph);
-    float time = metalRouter.route(0, target);
+
+    auto GPUstart = std::chrono::steady_clock::now();
+    float time = metalRouter.route(source, target);
+    auto GPUend = std::chrono::steady_clock::now();
+
+    std::chrono::duration<double, std::milli> GPUelapsed = GPUend - GPUstart;
+
+    std::cout << std::fixed << std::setprecision(3)
+            << "\nGPU Simulation time: "
+            << GPUelapsed.count()
+            << " ms\n";
+
     std::cout << "Time: " << time/60 << "mins\n";
-
-    // std::vector<Incident> incidents = generateRandomIncidents(network, count, incidentSeed);
-    // std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, count, vehicleSeed);
-
-    // Dispatch dispatch(network);
-    // dispatch.addVehicles(vehicles);
-    // dispatch.addIncidents(incidents);
-
-    // std::cout << "\n-> Running Simulation on CPU\n";
-    // std::cout << "Vehicles: " << dispatch.vehicleCount() << '\n';
-    // std::cout << "Incidents: " << dispatch.incidentCount() << '\n';
-
-    // // benchmark - timed
-
-    // auto start = std::chrono::steady_clock::now();
-
-    // dispatch.findOptimalAssignment();
-
-    // auto end = std::chrono::steady_clock::now();
-
-    // std::chrono::duration<double, std::milli> elapsed = end - start;
-
-    // std::cout << std::fixed << std::setprecision(3)
-    //         << "Simulation time: "
-    //         << elapsed.count()
-    //         << " ms\n";
 
     return 0;
 }
