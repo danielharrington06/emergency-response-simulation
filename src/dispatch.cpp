@@ -2,6 +2,7 @@
 #include "../include/router.hpp"
 #include "../include/incident.hpp"
 #include "../include/assignment.hpp"
+#include "../include/router.hpp"
 
 #include <iostream>
 #include <string>
@@ -79,6 +80,10 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
     std::size_t totalNodesVisited = 0;
     std::size_t routeCount = 0;
 
+    double totalDistance = 0;
+    double totalTime = 0;
+    double totalHeuristic = 0;
+
     const double infinity = std::numeric_limits<double>::infinity();
 
     for (size_t i = 0; i < availableVehicles.size(); i++) {
@@ -107,6 +112,9 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
             if (route.status == RouteStatus::Found) {
                 responseTimes.at(i).at(j) = route.totalTravelTime;
                 totalNodesVisited += route.nodesVisited;
+                totalDistance += route.totalDistance;
+                totalTime += route.totalTravelTime;
+                totalHeuristic += heuristic(network, vehicle.location, incident.location);
                 routeCount++;
             }
             else {
@@ -117,6 +125,21 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
     // for debugging - remove for larger networks and incident-vehicle counts
     //printResponseTimesMatrix(responseTimes);
     std::cout << "  Routes calculated: " << routeCount << '\n';
+    std::cout << "  Average distance per route: "
+          << totalDistance / routeCount
+          << " miles\n";
+
+    std::cout << "  Average travel time per route: "
+            << totalTime / routeCount
+            << " minutes\n";
+
+    std::cout << "  Average heuristic: "
+          << totalHeuristic / routeCount
+          << " minutes\n";
+
+    std::cout << "  Heuristic / actual time: "
+            << (totalHeuristic / totalTime) * 100.0
+            << "%\n";
     std::cout << "  Nodes visited: "
           << totalNodesVisited
           << '\n';
