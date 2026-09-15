@@ -76,6 +76,9 @@ const Incident& Dispatch::getIncident(uint32_t id) const {
 std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) const {
     std::vector<std::vector<double>> responseTimes(availableVehicles.size(), std::vector<double>(incidentsOfThisPriority.size()));
 
+    std::size_t totalNodesVisited = 0;
+    std::size_t routeCount = 0;
+
     const double infinity = std::numeric_limits<double>::infinity();
 
     for (size_t i = 0; i < availableVehicles.size(); i++) {
@@ -103,6 +106,8 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
 
             if (route.status == RouteStatus::Found) {
                 responseTimes.at(i).at(j) = route.totalTravelTime;
+                totalNodesVisited += route.nodesVisited;
+                routeCount++;
             }
             else {
                 responseTimes.at(i).at(j) = infinity;
@@ -111,7 +116,17 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
     }
     // for debugging - remove for larger networks and incident-vehicle counts
     //printResponseTimesMatrix(responseTimes);
+    std::cout << "  Routes calculated: " << routeCount << '\n';
+    std::cout << "  Nodes visited: "
+          << totalNodesVisited
+          << '\n';
 
+    if (routeCount > 0) {
+        std::cout << "  Average nodes per route: "
+                << static_cast<double>(totalNodesVisited)
+                    / routeCount
+                << '\n';
+    }
     return responseTimes;
 }
 
