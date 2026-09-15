@@ -13,6 +13,9 @@
 #include <vector>
 #include <iomanip>
 
+constexpr std::uint32_t MAX_ITERATIONS = 2500;
+constexpr std::uint32_t THREADS_PER_THREADGROUP = 256;
+
 struct MetalRouter::MetalState {
 
     GPUGraph graph;
@@ -21,10 +24,15 @@ struct MetalRouter::MetalState {
     id<MTLCommandQueue> commandQueue;
     id<MTLComputePipelineState> pipeline;
     id<MTLComputePipelineState> resetPipeline;
+    id<MTLComputePipelineState> preparePipeline;
+    id<MTLComputePipelineState> routingStateResetPipeline;
 
     id<MTLBuffer> nodeOffsetsBuffer;
     id<MTLBuffer> edgeDestinationsBuffer;
     id<MTLBuffer> edgeTravelTimesBuffer;
+    id<MTLBuffer> dispatchArgumentsBuffer;
+
+    NSUInteger threadsPerThreadgroup;
 
     MetalState(const GPUGraph& graph) : graph(graph) {
 
@@ -84,6 +92,47 @@ struct MetalRouter::MetalState {
             throw std::runtime_error("Failed to create reset pipeline");
         }
 
+        id<MTLFunction> prepareFunction = [library newFunctionWithName:@"prepare_dispatch"];
+
+        if (prepareFunction == nil) {
+            throw std::runtime_error("Failed to find prepare_dispatch kernel");
+        }
+
+        preparePipeline = [device newComputePipelineStateWithFunction:prepareFunction error:nil];
+
+        if (preparePipeline == nil) {
+            throw std::runtime_error("Failed to create prepare pipeline");
+        }
+
+        id<MTLFunction> routingStateResetFunction =
+            [library newFunctionWithName:@"reset_routing_state"];
+
+        if (routingStateResetFunction == nil) {
+            throw std::runtime_error(
+                "Failed to find reset_routing_state kernel"
+            );
+        }
+
+        routingStateResetPipeline =
+            [device newComputePipelineStateWithFunction:
+                routingStateResetFunction
+                error:nil];
+
+        if (routingStateResetPipeline == nil) {
+            throw std::runtime_error(
+                "Failed to create routing state reset pipeline"
+            );
+        }
+
+        threadsPerThreadgroup = 256;
+
+        if (threadsPerThreadgroup > pipeline.maxTotalThreadsPerThreadgroup ||
+            threadsPerThreadgroup > resetPipeline.maxTotalThreadsPerThreadgroup) {
+            throw std::runtime_error(
+                "Metal device does not support the required threadgroup size"
+            );
+        }
+
         nodeOffsetsBuffer =
             [device newBufferWithBytes:graph.nodeOffsets.data()
                             length:graph.nodeOffsets.size() *
@@ -101,14 +150,17 @@ struct MetalRouter::MetalState {
                             length:graph.edgeTravelTimes.size() *
                                    sizeof(float)
                            options:MTLResourceStorageModeShared];
+        
+        dispatchArgumentsBuffer =
+            [device newBufferWithLength:
+                3 * sizeof(std::uint32_t)
+                options:MTLResourceStorageModeShared];
 
         if (nodeOffsetsBuffer == nil ||
             edgeDestinationsBuffer == nil ||
-            edgeTravelTimesBuffer == nil) {
-
-            throw std::runtime_error(
-                "Failed to upload graph to Metal"
-            );
+            edgeTravelTimesBuffer == nil ||
+            dispatchArgumentsBuffer == nil) {
+            throw std::runtime_error("Failed to create Metal buffers");
         }
     }
 };
@@ -164,8 +216,6 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         [state->device newBufferWithBytes:improved.data()
                             length:improved.size() * sizeof(std::uint32_t)
                         options:MTLResourceStorageModeShared];
-    
-    std::uint32_t initialFrontierCount = 0;
 
     id<MTLBuffer> nextFrontierCountBuffer =
         [state->device
@@ -190,34 +240,40 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
             "Failed to create routing buffers"
         );
     }
-    
-    std::size_t frontierCount = 1;
-
-    std::size_t iterationCount = 0;
-
-    double totalGPUExecutionTime = 0.0;
     auto start = std::chrono::steady_clock::now();
 
-    while (frontierCount > 0) {
-        ++iterationCount;
+    auto* dispatchArguments = static_cast<std::uint32_t*>(state->dispatchArgumentsBuffer.contents);
 
-        std::uint32_t zero = 0;
+    dispatchArguments[0] = 1;
+    dispatchArguments[1] = 1;
+    dispatchArguments[2] = 1;
 
-        std::memcpy(
-            nextFrontierCountBuffer.contents,
-            &zero,
-            sizeof(std::uint32_t)
-        );
+    id<MTLCommandBuffer> commandBuffer = [state->commandQueue commandBuffer];
 
-        std::memcpy(
-            nextFrontierMinTimeBuffer.contents,
-            &INF,
-            sizeof(std::uint32_t)
-        );
+    for (std::uint32_t iteration = 0; iteration < MAX_ITERATIONS; ++iteration) {
 
-        id<MTLCommandBuffer> commandBuffer = [state->commandQueue commandBuffer];
+        // reset routing state
 
-        // Reset improved flags for the current frontier
+        id<MTLComputeCommandEncoder> stateResetEncoder = [commandBuffer computeCommandEncoder];
+
+        [stateResetEncoder setComputePipelineState:state->routingStateResetPipeline];
+
+        [stateResetEncoder setBuffer:nextFrontierCountBuffer offset:0 atIndex:0];
+        [stateResetEncoder setBuffer:nextFrontierMinTimeBuffer offset:0 atIndex:1];
+
+        const std::uint32_t infValue = INF;
+
+        [stateResetEncoder setBytes:&infValue length:sizeof(infValue) atIndex:2];
+
+        [stateResetEncoder
+            dispatchThreads:
+                MTLSizeMake(1, 1, 1)
+            threadsPerThreadgroup:
+                MTLSizeMake(1, 1, 1)];
+
+        [stateResetEncoder endEncoding];
+
+        // reset improved flags
 
         id<MTLComputeCommandEncoder> resetEncoder = [commandBuffer computeCommandEncoder];
 
@@ -226,16 +282,15 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         [resetEncoder setBuffer:frontierBuffer offset:0 atIndex:0];
         [resetEncoder setBuffer:improvedBuffer offset:0 atIndex:1];
 
-        const NSUInteger resetThreadgroupSize = std::min(static_cast<NSUInteger>(frontierCount), state->resetPipeline.maxTotalThreadsPerThreadgroup);
-
-        [resetEncoder dispatchThreads:
-            MTLSizeMake(frontierCount, 1, 1)
+        [resetEncoder
+            dispatchThreadgroupsWithIndirectBuffer:state->dispatchArgumentsBuffer
+            indirectBufferOffset:0
             threadsPerThreadgroup:
-            MTLSizeMake(resetThreadgroupSize, 1, 1)];
+                MTLSizeMake(state->threadsPerThreadgroup, 1, 1)];
 
         [resetEncoder endEncoding];
 
-        // Relax the current frontier
+        // relax current frontier
 
         id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
 
@@ -251,54 +306,58 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         [encoder setBuffer:nextFrontierCountBuffer offset:0 atIndex:7];
         [encoder setBuffer:nextFrontierMinTimeBuffer offset:0 atIndex:8];
 
-        const NSUInteger threadgroupSize =
-            std::min(
-                static_cast<NSUInteger>(frontierCount),
-                state->pipeline.maxTotalThreadsPerThreadgroup
-            );
-
-        [encoder dispatchThreads:
-            MTLSizeMake(frontierCount, 1, 1)
+        [encoder dispatchThreadgroupsWihIndirectBuffer: state->dispatchArgumentsBuffer
+            indirectBufferOffset:0
             threadsPerThreadgroup:
-            MTLSizeMake(threadgroupSize, 1, 1)];
+                MTLSizeMake(state->threadsPerThreadgroup, 1, 1)];
 
         [encoder endEncoding];
 
-        [commandBuffer commit];
-        [commandBuffer waitUntilCompleted];
+        // prepare indirect dispatch for next generation
 
-        if (commandBuffer.status == MTLCommandBufferStatusError) {
-            throw std::runtime_error(
-                "Metal routing command buffer failed"
-            );
-        }
+        id<MTLComputeCommandEncoder> prepareEncoder = [commandBuffer computeCommandEncoder];
 
-        totalGPUExecutionTime += (commandBuffer.GPUEndTime - commandBuffer.GPUStartTime) * 1000.0;
+        [prepareEncoder setComputePipelineState:state->preparePipeline];
 
-        const std::uint32_t* countResult = static_cast<const std::uint32_t*>(nextFrontierCountBuffer.contents);
-        frontierCount = *countResult;
+        [prepareEncoder setBuffer:nextFrontierCountBuffer offset:0 atIndex:0];
+        [prepareEncoder setBuffer:nextFrontierMinTimeBuffer offset:0 atIndex:1];
+        [prepareEncoder setBuffer:travelTimesBuffer offset:0 atIndex:2];
+        [prepareEncoder setBuffer:state->dispatchArgumentsBuffer offset:0 atIndex:3];
+        [prepareEncoder setBytes:&targetNode length:sizeof(targetNode) atIndex:4];
+        const std::uint32_t threadsPerThreadgroup = static_cast<std::uint32_t>(state->threadsPerThreadgroup);
+        [prepareEncoder setBytes:&threadsPerThreadgroup length:sizeof(threadsPerThreadgroup) atIndex:5];
 
-        const std::uint32_t* minTimeResult = static_cast<const std::uint32_t*>(nextFrontierMinTimeBuffer.contents);
-        const std::uint32_t targetTime = static_cast<const std::uint32_t*>(travelTimesBuffer.contents)[targetNode];
 
-        if (frontierCount == 0 || targetTime <= *minTimeResult) {
-            break;
-        }
+        [prepareEncoder
+            dispatchThreads:
+                MTLSizeMake(1, 1, 1)
+            threadsPerThreadgroup:
+                MTLSizeMake(1, 1, 1)];
 
-        std::swap(frontierBuffer, nextFrontierBuffer);
+        [prepareEncoder endEncoding];
+
+        // swap frontier buffers
+
+        std::swap(
+            frontierBuffer,
+            nextFrontierBuffer
+        );
     }
 
-    std::cout << "GPU execution time: "
-          << totalGPUExecutionTime
-          << " ms\n";
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
 
-    auto end = std::chrono::steady_clock::now();
+    // std::cout << "GPU execution time: "
+    //       << totalGPUExecutionTime
+    //       << " ms\n";
 
-    std::chrono::duration<double, std::milli> elapsed = end - start;
+    // auto end = std::chrono::steady_clock::now();
 
-    std::cout << "GPU Wall time: "
-            << elapsed.count()
-            << " ms\n";
+    // std::chrono::duration<double, std::milli> elapsed = end - start;
+
+    // std::cout << "GPU Wall time: "
+    //         << elapsed.count()
+    //         << " ms\n";
 
     const std::uint32_t* results = static_cast<const std::uint32_t*>(travelTimesBuffer.contents);
 

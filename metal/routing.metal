@@ -58,3 +58,41 @@ kernel void reset_improved(
 
     atomic_store_explicit(&improved[node], 0, memory_order_relaxed);
 }
+
+// calculate number of threadgroups required for next frontier
+kernel void prepare_dispatch(
+    device const atomic_uint* nextFrontierCount [[buffer(0)]],
+    device const atomic_uint* nextFrontierMinTime [[buffer(1)]],
+    device const atomic_uint* travelTimes [[buffer(2)]],
+
+    device uint* dispatchArguments [[buffer(3)]],
+
+    constant uint& targetNode [[buffer(4)]],
+    constant uint& threadsPerThreadgroup [[buffer(5)]]
+) {
+    uint frontierCount = atomic_load_explicit(&nextFrontierCount[0], memory_order_relaxed);
+    uint minTime = atomic_load_explicit(&nextFrontierMinTime[0], memory_order_relaxed);
+    uint targetTime = atomic_load_explicit(&travelTimes[targetNode], memory_order_relaxed);
+    
+    uint threadgroups = 0;
+
+    if (frontierCount > 0 && targetTime > minTime) {
+
+        threadgroups = (frontierCount + threadsPerThreadgroup - 1) / threadsPerThreadgroup;
+    }
+
+    dispatchArguments[0] = threadgroups;
+    dispatchArguments[1] = 1;
+    dispatchArguments[2] = 1;
+}
+
+// reset nextFrontierCount and nextFrontierMinTime
+kernel void reset_routing_state(
+    device atomic_uint* nextFrontierCount [[buffer(0)]],
+    device atomic_uint* nextFrontierMinTime [[buffer(1)]],
+
+    constant uint& infTime [[buffer(2)]]
+) {
+    atomic_store_explicit(nextFrontierCount, 0, memory_order_relaxed);
+    atomic_store_explicit(nextFrontierMinTime, infTime, memory_order_relaxed);
+}
