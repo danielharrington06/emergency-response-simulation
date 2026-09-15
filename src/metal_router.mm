@@ -4,6 +4,9 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <limits>
+#include <vector>
+#include <cstdint>
 
 MetalRouter::MetalRouter(const GPUGraph& graph) {
 
@@ -28,15 +31,14 @@ MetalRouter::MetalRouter(const GPUGraph& graph) {
     }
 
     id<MTLFunction> function =
-        [library newFunctionWithName:@"calculate_degrees"];
+        [library newFunctionWithName:@"relax_frontier"];
 
     if (function == nil) {
-        throw std::runtime_error("Failed to find calculate_degrees kernel");
+        throw std::runtime_error("Failed to find relax_frontier kernel");
     }
 
     id<MTLComputePipelineState> pipeline =
-        [device newComputePipelineStateWithFunction:function
-                                               error:nil];
+        [device newComputePipelineStateWithFunction:function error:nil];
 
     if (pipeline == nil) {
         throw std::runtime_error("Failed to create compute pipeline");
@@ -47,23 +49,56 @@ MetalRouter::MetalRouter(const GPUGraph& graph) {
                             length:graph.nodeOffsets.size() * sizeof(std::uint32_t)
                            options:MTLResourceStorageModeShared];
 
-    id<MTLBuffer> degreesBuffer =
-        [device newBufferWithLength:
-                    graph.nodeOffsets.size() * sizeof(std::uint32_t)
+    // id<MTLBuffer> degreesBuffer =
+    //     [device newBufferWithLength:
+    //                 graph.nodeOffsets.size() * sizeof(std::uint32_t)
+    //                        options:MTLResourceStorageModeShared];
+    
+    std::uint32_t sourceNode = 0;
+
+    std::uint32_t frontierData[] = { sourceNode };
+
+    id<MTLBuffer> frontierBuffer =
+        [device newBufferWithBytes:frontierData
+                            length:sizeof(frontierData)
+                        options:MTLResourceStorageModeShared];
+    
+    const std::size_t nodeCount = graph.nodeOffsets.size() - 1;
+
+    const std::uint32_t INF = std::numeric_limits<std::uint32_t>::max();
+
+    std::vector<uint32_t> initialTravelTimes(nodeCount, INF);
+
+    initialTravelTimes[sourceNode] = 0.0f;
+
+    id<MTLBuffer> travelTimesBuffer =
+    [device newBufferWithBytes:initialTravelTimes.data()
+                        length:initialTravelTimes.size() * sizeof(uint32_t)
+                       options:MTLResourceStorageModeShared];
+
+    std::vector<std::uint32_t> nextTravelTimes(nodeCount, INF);
+
+    id<MTLBuffer> nextTravelTimesBuffer =
+        [device newBufferWithBytes:nextTravelTimes.data()
+                            length:nextTravelTimes.size() * sizeof(std::uint32_t)
+                        options:MTLResourceStorageModeShared];
+
+    id<MTLBuffer> edgeDestinationsBuffer =
+        [device newBufferWithBytes:graph.edgeDestinations.data()
+                            length:graph.edgeDestinations.size() * sizeof(std::uint32_t)
                            options:MTLResourceStorageModeShared];
 
-    // id<MTLBuffer> edgeDestinationsBuffer =
-    //     [device newBufferWithBytes:graph.edgeDestinations.data()
-    //                         length:graph.edgeDestinations.size() * sizeof(std::uint32_t)
-    //                        options:MTLResourceStorageModeShared];
+    id<MTLBuffer> edgeTravelTimesBuffer =
+        [device newBufferWithBytes:graph.edgeTravelTimes.data()
+                            length:graph.edgeTravelTimes.size() * sizeof(float)
+                          options:MTLResourceStorageModeShared];
 
-    // id<MTLBuffer> edgeTravelTimesBuffer =
-    //     [device newBufferWithBytes:graph.edgeTravelTimes.data()
-    //                         length:graph.edgeTravelTimes.size() * sizeof(float)
-    //                       options:MTLResourceStorageModeShared];
-
-    if (nodeOffsetsBuffer == nil || degreesBuffer == nil) {
-        throw std::runtime_error("Failed to create Metal buffers");
+    if (frontierBuffer == nil ||
+        travelTimesBuffer == nil ||
+        nextTravelTimesBuffer == nil) {
+        throw std::runtime_error(
+            "Failed to create routing buffers"
+        );
     }
 
     id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
@@ -74,14 +109,20 @@ MetalRouter::MetalRouter(const GPUGraph& graph) {
 
     [encoder setBuffer:nodeOffsetsBuffer offset:0 atIndex:0];
 
-    [encoder setBuffer:degreesBuffer offset:0 atIndex:1];
+    [encoder setBuffer:edgeDestinationsBuffer offset:0 atIndex:1];
 
-    NSUInteger nodeCount = graph.nodeOffsets.size() - 1;
+    [encoder setBuffer:edgeTravelTimesBuffer offset:0 atIndex:2];
+
+    [encoder setBuffer:frontierBuffer offset:0 atIndex:3];
+
+    [encoder setBuffer:travelTimesBuffer offset:0 atIndex:4];
+
+    [encoder setBuffer:nextTravelTimesBuffer offset:0 atIndex:5];
 
     [encoder dispatchThreads:
-        MTLSizeMake(nodeCount, 1, 1)
+        MTLSizeMake(1, 1, 1)
         threadsPerThreadgroup:
-        MTLSizeMake(pipeline.maxTotalThreadsPerThreadgroup, 1, 1)];
+        MTLSizeMake(1, 1, 1)];
 
     [encoder endEncoding];
 
@@ -92,36 +133,25 @@ MetalRouter::MetalRouter(const GPUGraph& graph) {
         throw std::runtime_error("Metal command buffer failed");
     }
 
-    const auto* degrees = static_cast<const std::uint32_t*>(degreesBuffer.contents);
+    const std::uint32_t* results = static_cast<const std::uint32_t*>(nextTravelTimesBuffer.contents);
 
-    std::size_t mismatches = 0;
+    const std::uint32_t start = graph.nodeOffsets[sourceNode];
+    const std::uint32_t end = graph.nodeOffsets[sourceNode + 1];
 
-    for (std::size_t i = 0; i < nodeCount; ++i) {
-        const std::uint32_t expected = graph.nodeOffsets[i + 1] - graph.nodeOffsets[i];
+    std::cout << "\nGPU edge relaxation from node "
+            << sourceNode
+            << ":\n";
 
-        if (degrees[i] != expected) {
-            ++mismatches;
+    for (std::uint32_t edge = start; edge < end; ++edge) {
 
-            if (mismatches <= 5) {
-                std::cout << "Mismatch at node "
-                        << i
-                        << ": GPU = "
-                        << degrees[i]
-                        << ", CPU = "
-                        << expected
-                        << '\n';
-            }
-        }
-    }
+        const std::uint32_t destination = graph.edgeDestinations[edge];
+        float seconds = static_cast<float>(results[destination]) / 1000000.0f; // 1 000 000 was the multiplier
 
-    if (mismatches == 0) {
-        std::cout << "GPU degree test passed: "
-                << nodeCount
-                << " nodes verified\n";
-    } else {
-        std::cout << "GPU degree test failed: "
-                << mismatches
-                << " mismatches\n";
+        std::cout << "  -> node "
+                << destination
+                << ": "
+                << seconds
+                << " seconds\n";
     }
 }
 
