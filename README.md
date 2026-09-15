@@ -61,6 +61,7 @@ clang++ -std=c++17 \
     src/osm_loader.cpp \
     src/scenario_generator.cpp \
     src/assignment.cpp \
+    src/gpu_graph.cpp \
     -framework Metal \
     -framework Foundation \
     -o bin/main

@@ -3,6 +3,7 @@
 #include "../include/scenario_generator.hpp"
 #include "../include/dispatch.hpp"
 #include "../include/assignment.hpp"
+#include "../include/gpu_graph.hpp"
 
 #include <iostream>
 #include <iomanip>
@@ -41,31 +42,33 @@ int main(int argc, char *argv[]) {
               << network.edgeCount()
               << '\n';
 
-    std::vector<Incident> incidents = generateRandomIncidents(network, count, incidentSeed);
-    std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, count, vehicleSeed);
+    testGPUGraph(network);
 
-    Dispatch dispatch(network);
-    dispatch.addVehicles(vehicles);
-    dispatch.addIncidents(incidents);
+    // std::vector<Incident> incidents = generateRandomIncidents(network, count, incidentSeed);
+    // std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, count, vehicleSeed);
 
-    std::cout << "\n-> Running Simulation on CPU\n";
-    std::cout << "Vehicles: " << dispatch.vehicleCount() << '\n';
-    std::cout << "Incidents: " << dispatch.incidentCount() << '\n';
+    // Dispatch dispatch(network);
+    // dispatch.addVehicles(vehicles);
+    // dispatch.addIncidents(incidents);
 
-    // benchmark - timed
+    // std::cout << "\n-> Running Simulation on CPU\n";
+    // std::cout << "Vehicles: " << dispatch.vehicleCount() << '\n';
+    // std::cout << "Incidents: " << dispatch.incidentCount() << '\n';
 
-    auto start = std::chrono::steady_clock::now();
+    // // benchmark - timed
 
-    dispatch.findOptimalAssignment();
+    // auto start = std::chrono::steady_clock::now();
 
-    auto end = std::chrono::steady_clock::now();
+    // dispatch.findOptimalAssignment();
 
-    std::chrono::duration<double, std::milli> elapsed = end - start;
+    // auto end = std::chrono::steady_clock::now();
 
-    std::cout << std::fixed << std::setprecision(3)
-            << "Simulation time: "
-            << elapsed.count()
-            << " ms\n";
+    // std::chrono::duration<double, std::milli> elapsed = end - start;
+
+    // std::cout << std::fixed << std::setprecision(3)
+    //         << "Simulation time: "
+    //         << elapsed.count()
+    //         << " ms\n";
 
     return 0;
 }
