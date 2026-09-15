@@ -54,6 +54,14 @@ COMP0002-C-Coursework/
 
 ## Compile and Run
 ```bash
+xcrun -sdk macosx metal \
+    metal/routing.metal \
+    -o bin/routing.air
+
+xcrun -sdk macosx metallib \
+    bin/routing.air \
+    -o bin/routing.metallib
+
 clang++ -std=c++17 \
     src/main.cpp \
     src/road_network.cpp \
