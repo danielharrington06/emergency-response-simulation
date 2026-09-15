@@ -115,6 +115,7 @@ Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination
 
     // no route found, return route in state with found = False
     if (gScore[destination] == infinity) {
+        route.totalTravelTime = infinity;
         return route;
     }
 

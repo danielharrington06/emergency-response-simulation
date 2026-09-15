@@ -3,7 +3,7 @@
 using namespace metal;
 
 // for the node on the frontier, relaxes all outgoing edges
-// has to use integer travel times, which are 1,000,000 times the actual float time to have atomic_fetch_min_explicit work
+// has to use integer travel times, which are 1,000 times the actual float time to have atomic_fetch_min_explicit work
 kernel void relax_frontier(
     device const uint* nodeOffsets [[buffer(0)]],
     device const uint* edgeDestinations [[buffer(1)]],
@@ -17,9 +17,13 @@ kernel void relax_frontier(
     device uint* nextFrontier [[buffer(6)]],
     device atomic_uint* nextFrontierCount [[buffer(7)]],
     device atomic_uint* nextFrontierMinTime [[buffer(8)]],
+    device const uint* frontierCount [[buffer(9)]],
 
     uint frontierIndex [[thread_position_in_grid]]
 ) {
+    if (frontierIndex >= frontierCount[0]) {
+        return;
+    }
     uint node = frontier[frontierIndex];
 
     uint start = nodeOffsets[node];
@@ -36,12 +40,13 @@ kernel void relax_frontier(
         uint oldTime = atomic_fetch_min_explicit(&travelTimes[destination], newTime, memory_order_relaxed);
 
         if (newTime < oldTime) {
+            atomic_fetch_min_explicit(nextFrontierMinTime, newTime, memory_order_relaxed);
             uint alreadyImproved = atomic_exchange_explicit(&improved[destination], 1, memory_order_relaxed);
 
             if (alreadyImproved == 0) {
+
                 uint index = atomic_fetch_add_explicit(nextFrontierCount, 1, memory_order_relaxed);
                 nextFrontier[index] = destination;
-                atomic_fetch_min_explicit(nextFrontierMinTime, newTime, memory_order_relaxed);
             }
         }
     }
@@ -51,9 +56,14 @@ kernel void relax_frontier(
 kernel void reset_improved(
     device const uint* frontier [[buffer(0)]],
     device atomic_uint* improved [[buffer(1)]],
+    device const uint* frontierCount [[buffer(2)]],
 
     uint frontierIndex [[thread_position_in_grid]]
 ) {
+    if (frontierIndex >= frontierCount[0]) {
+        return;
+    }
+
     uint node = frontier[frontierIndex];
 
     atomic_store_explicit(&improved[node], 0, memory_order_relaxed);
@@ -68,12 +78,16 @@ kernel void prepare_dispatch(
     device uint* dispatchArguments [[buffer(3)]],
 
     constant uint& targetNode [[buffer(4)]],
-    constant uint& threadsPerThreadgroup [[buffer(5)]]
+    constant uint& threadsPerThreadgroup [[buffer(5)]],
+
+    device uint* currentFrontierCount [[buffer(6)]]
 ) {
     uint frontierCount = atomic_load_explicit(&nextFrontierCount[0], memory_order_relaxed);
+    currentFrontierCount[0] = frontierCount;
+
     uint minTime = atomic_load_explicit(&nextFrontierMinTime[0], memory_order_relaxed);
     uint targetTime = atomic_load_explicit(&travelTimes[targetNode], memory_order_relaxed);
-    
+
     uint threadgroups = 0;
 
     if (frontierCount > 0 && targetTime > minTime) {

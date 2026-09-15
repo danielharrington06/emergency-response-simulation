@@ -217,11 +217,21 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
                             length:improved.size() * sizeof(std::uint32_t)
                         options:MTLResourceStorageModeShared];
 
+    std::uint32_t initialFrontierCount = 0;
+
     id<MTLBuffer> nextFrontierCountBuffer =
         [state->device
             newBufferWithBytes:&initialFrontierCount
                         length:sizeof(std::uint32_t)
                     options:MTLResourceStorageModeShared];
+    
+    std::uint32_t currentFrontierCount = 1;
+
+    id<MTLBuffer> currentFrontierCountBuffer =
+        [state->device
+            newBufferWithBytes:&currentFrontierCount
+            length:sizeof(std::uint32_t)
+            options:MTLResourceStorageModeShared];
 
     std::uint32_t initialMinTime = INF;
 
@@ -235,12 +245,12 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         travelTimesBuffer == nil ||
         improvedBuffer == nil ||
         nextFrontierCountBuffer == nil ||
-        nextFrontierMinTimeBuffer == nil) {
+        nextFrontierMinTimeBuffer == nil ||
+        currentFrontierCountBuffer == nil) {
         throw std::runtime_error(
             "Failed to create routing buffers"
         );
     }
-    auto start = std::chrono::steady_clock::now();
 
     auto* dispatchArguments = static_cast<std::uint32_t*>(state->dispatchArgumentsBuffer.contents);
 
@@ -281,6 +291,7 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
 
         [resetEncoder setBuffer:frontierBuffer offset:0 atIndex:0];
         [resetEncoder setBuffer:improvedBuffer offset:0 atIndex:1];
+        [resetEncoder setBuffer:currentFrontierCountBuffer offset:0 atIndex:2];
 
         [resetEncoder
             dispatchThreadgroupsWithIndirectBuffer:state->dispatchArgumentsBuffer
@@ -305,8 +316,9 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         [encoder setBuffer:nextFrontierBuffer offset:0 atIndex:6];
         [encoder setBuffer:nextFrontierCountBuffer offset:0 atIndex:7];
         [encoder setBuffer:nextFrontierMinTimeBuffer offset:0 atIndex:8];
+        [encoder setBuffer:currentFrontierCountBuffer offset:0 atIndex:9];
 
-        [encoder dispatchThreadgroupsWihIndirectBuffer: state->dispatchArgumentsBuffer
+        [encoder dispatchThreadgroupsWithIndirectBuffer: state->dispatchArgumentsBuffer
             indirectBufferOffset:0
             threadsPerThreadgroup:
                 MTLSizeMake(state->threadsPerThreadgroup, 1, 1)];
@@ -326,6 +338,7 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         [prepareEncoder setBytes:&targetNode length:sizeof(targetNode) atIndex:4];
         const std::uint32_t threadsPerThreadgroup = static_cast<std::uint32_t>(state->threadsPerThreadgroup);
         [prepareEncoder setBytes:&threadsPerThreadgroup length:sizeof(threadsPerThreadgroup) atIndex:5];
+        [prepareEncoder setBuffer:currentFrontierCountBuffer offset:0 atIndex:6];
 
 
         [prepareEncoder
@@ -344,8 +357,22 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         );
     }
 
+    auto start = std::chrono::steady_clock::now();
+
     [commandBuffer commit];
     [commandBuffer waitUntilCompleted];
+
+    if (commandBuffer.status == MTLCommandBufferStatusError) {
+        std::string message = "Metal routing command buffer failed";
+
+        if (commandBuffer.error != nil) {
+            message += ": ";
+            message +=
+                [[commandBuffer.error localizedDescription] UTF8String];
+        }
+
+        throw std::runtime_error(message);
+    }
 
     // std::cout << "GPU execution time: "
     //       << totalGPUExecutionTime
@@ -360,6 +387,10 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
     //         << " ms\n";
 
     const std::uint32_t* results = static_cast<const std::uint32_t*>(travelTimesBuffer.contents);
+
+    if (results[targetNode] == INF) {
+        return std::numeric_limits<float>::infinity();
+    }
 
     return static_cast<float>(results[targetNode]) / (1000.0f*60.0f);
 }

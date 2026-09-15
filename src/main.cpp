@@ -88,6 +88,7 @@ int main(int argc, char *argv[]) {
 
     // --- CPU benchmark ---
 
+
     double totalCPUTime = 0.0;
     unsigned int successfulRoutes = 0;
 
@@ -176,10 +177,20 @@ int main(int argc, char *argv[]) {
             std::cout << "  CPU: "
                     << cpuTime
                     << " mins\n";
-
+                    
             std::cout << "  GPU: "
                     << gpuTime
                     << " mins\n";
+
+            double distance = findRoute(
+                network,
+                routes[i].source,
+                routes[i].target
+            ).totalDistance;
+        
+            std::cout << "  Distance: "
+                    << distance
+                    << '\n';
 
             std::cout << "  Difference: "
                     << std::abs(cpuTime - gpuTime)
