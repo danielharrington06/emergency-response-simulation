@@ -92,26 +92,37 @@ MetalRouter::MetalRouter(const GPUGraph& graph) {
         throw std::runtime_error("Metal command buffer failed");
     }
 
-    const auto* degrees =
-        static_cast<const std::uint32_t*>(degreesBuffer.contents);
+    const auto* degrees = static_cast<const std::uint32_t*>(degreesBuffer.contents);
 
-    std::cout << "Metal device: "
-              << [device.name UTF8String]
-              << '\n';
+    std::size_t mismatches = 0;
 
-    std::cout << "GPU degree test successful\n";
+    for (std::size_t i = 0; i < nodeCount; ++i) {
+        const std::uint32_t expected = graph.nodeOffsets[i + 1] - graph.nodeOffsets[i];
 
-    std::cout << "Node 0 degree: "
-              << degrees[0]
-              << '\n';
+        if (degrees[i] != expected) {
+            ++mismatches;
 
-    std::cout << "Node 1 degree: "
-              << degrees[1]
-              << '\n';
+            if (mismatches <= 5) {
+                std::cout << "Mismatch at node "
+                        << i
+                        << ": GPU = "
+                        << degrees[i]
+                        << ", CPU = "
+                        << expected
+                        << '\n';
+            }
+        }
+    }
 
-    std::cout << "Node 2 degree: "
-              << degrees[2]
-              << '\n';
+    if (mismatches == 0) {
+        std::cout << "GPU degree test passed: "
+                << nodeCount
+                << " nodes verified\n";
+    } else {
+        std::cout << "GPU degree test failed: "
+                << mismatches
+                << " mismatches\n";
+    }
 }
 
 void MetalRouter::testGraph() {
