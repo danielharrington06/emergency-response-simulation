@@ -24,6 +24,10 @@ OpenStreetMap is used for a real road network. I used a county near me in the UK
 ## Metal GPU Implementation
 For the graph network to work efficiently on the GPU, it needs fixed length arrays with reliable offsets rather than ragged `<vector>` objects as in the `road_network` implementation. `gpu_graph.cpp` formats the graph through a CSR conversion, to setup for the Metal GPU code.
 
+Performance Improvements
+- had kernel process next frontier (750->530ms)
+- establishing a safe global termination (530->420ms)
+
 ## Benchmarking
 To give reliable results, benchmarking should be carried out on the same seed.
 

@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     std::chrono::duration<double, std::milli> GPUelapsed = GPUend - GPUstart;
 
     std::cout << std::fixed << std::setprecision(3)
-            << "\nGPU Simulation time: "
+            << "GPU Simulation time: "
             << GPUelapsed.count()
             << " ms\n";
 

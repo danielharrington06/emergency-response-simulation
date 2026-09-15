@@ -28,6 +28,7 @@ kernel void relax_frontier(
 
     device uint* nextFrontier [[buffer(6)]],
     device atomic_uint* nextFrontierCount [[buffer(7)]],
+    device atomic_uint* nextFrontierMinTime [[buffer(8)]],
 
     uint frontierIndex [[thread_position_in_grid]]
 ) {
@@ -48,10 +49,11 @@ kernel void relax_frontier(
 
         if (newTime < oldTime) {
             uint alreadyImproved = atomic_exchange_explicit(&improved[destination], 1, memory_order_relaxed);
-            
+
             if (alreadyImproved == 0) {
                 uint index = atomic_fetch_add_explicit(nextFrontierCount, 1, memory_order_relaxed);
                 nextFrontier[index] = destination;
+                atomic_fetch_min_explicit(nextFrontierMinTime, newTime, memory_order_relaxed);
             }
         }
     }
