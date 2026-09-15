@@ -6,27 +6,27 @@
 #include "../include/gpu_graph.hpp"
 #include "../include/metal_router.hpp"
 
-#include <iostream>
+#include <chrono>
+#include <cmath>
 #include <iomanip>
+#include <iostream>
+#include <random>
+#include <stdexcept>
+#include <vector>
 
-// const unsigned int incidentSeed = 12345;
-// const unsigned int vehicleSeed = 67890;
+struct RoutePair {
+    unsigned int source;
+    unsigned int target;
+};
 
-// const unsigned int incidentCount = 10;
-// const unsigned int vehicleCount = 10;
-
-// const unsigned int DEFAULT_COUNT = 10;
+const unsigned int BENCHMARK_SEED = 12345;
+const unsigned int DEFAULT_BENCHMARK_ROUTE_COUNT = 10;
 
 int main(int argc, char *argv[]) {
-    unsigned int source = 0;
-    unsigned int target = 10;
+    unsigned int benchmark_route_count = DEFAULT_BENCHMARK_ROUTE_COUNT;
 
     if (argc == 2) {
-        target = std::stoul(argv[1]);
-    }
-    if (argc == 3) {
-        source = std::stoul(argv[1]);
-        target = std::stoul(argv[2]);
+        benchmark_route_count = std::stoul(argv[1]);
     }
 
     // setup - not timed
@@ -48,36 +48,195 @@ int main(int argc, char *argv[]) {
               << network.edgeCount()
               << '\n';
 
-    // CPU
+    // Generate reproducible random routes
+    std::mt19937 generator(BENCHMARK_SEED);
 
-    auto CPUstart = std::chrono::steady_clock::now();
-    Route route = findRoute(network, source, target);
-    auto CPUend = std::chrono::steady_clock::now();
-    std::chrono::duration<double, std::milli> CPUelapsed = CPUend - CPUstart;
-    std::cout << std::fixed << std::setprecision(3)
-            << "\nCPU Simulation time: "
-            << CPUelapsed.count()
-            << " ms\n";
+    std::uniform_int_distribution<unsigned int> nodeDistribution(
+        0,
+        static_cast<unsigned int>(network.nodeCount() - 1)
+    );
 
-    std::cout << "Time: " << route.totalTravelTime << "mins\n";
+    std::vector<RoutePair> routes;
+    routes.reserve(benchmark_route_count);
 
-    // GPU
+    for (unsigned int i = 0;
+         i < benchmark_route_count;
+         ++i) {
 
+        unsigned int source = nodeDistribution(generator);
+        unsigned int target = nodeDistribution(generator);
+
+        while (target == source) {
+            target = nodeDistribution(generator);
+        }
+
+        routes.push_back({source, target});
+    }
+
+    std::cout << "\n-> Generated "
+              << routes.size()
+              << " benchmark routes\n";
+
+    std::cout << "Seed: "
+              << BENCHMARK_SEED
+              << '\n';
+
+    // Create GPU graph and router - not timed
     GPUGraph gpuGraph = createGPUGraph(network);
     MetalRouter metalRouter(gpuGraph);
 
+
+    // --- CPU benchmark ---
+
+    double totalCPUTime = 0.0;
+    unsigned int successfulRoutes = 0;
+
+    auto CPUstart = std::chrono::steady_clock::now();
+
+    std::vector<float> cpuResults;
+    cpuResults.reserve(routes.size());
+
+    for (const RoutePair& routePair : routes) {
+
+        Route route = findRoute(
+            network,
+            routePair.source,
+            routePair.target
+        );
+
+        cpuResults.push_back(route.totalTravelTime);
+
+        if (std::isfinite(route.totalTravelTime)) {
+            ++successfulRoutes;
+        }
+    }
+
+    auto CPUend = std::chrono::steady_clock::now();
+
+    std::chrono::duration<double, std::milli> CPUelapsed = CPUend - CPUstart;
+
+    totalCPUTime = CPUelapsed.count();
+
+
+    // --- GPU ---
+
+
     auto GPUstart = std::chrono::steady_clock::now();
-    float time = metalRouter.route(source, target);
+
+    std::vector<float> gpuResults;
+    gpuResults.reserve(routes.size());
+
+    for (const RoutePair& routePair : routes) {
+
+        float time = metalRouter.route(
+            routePair.source,
+            routePair.target
+        );
+
+        gpuResults.push_back(time);
+    }
+
     auto GPUend = std::chrono::steady_clock::now();
 
     std::chrono::duration<double, std::milli> GPUelapsed = GPUend - GPUstart;
 
-    std::cout << std::fixed << std::setprecision(3)
-            << "GPU Simulation time: "
-            << GPUelapsed.count()
-            << " ms\n";
+    double totalGPUTime = GPUelapsed.count();
 
-    std::cout << "Time: " << time/60 << "mins\n";
+
+    // ---------------------------------------------------------
+    // Verify results
+    // ---------------------------------------------------------
+
+    unsigned int matchingRoutes = 0;
+
+    for (std::size_t i = 0; i < routes.size(); ++i) {
+
+        const float cpuTime = cpuResults[i];
+        const float gpuTime = gpuResults[i];
+
+        if (std::isinf(cpuTime) && std::isinf(gpuTime)) {
+
+            ++matchingRoutes;
+            continue;
+        }
+
+        else if (std::abs(cpuTime - gpuTime) < 0.001f) {
+            ++matchingRoutes;
+        }
+
+        else {
+            std::cout << "\nRoute "
+                    << i
+                    << ": "
+                    << routes[i].source
+                    << " -> "
+                    << routes[i].target
+                    << '\n';
+
+            std::cout << "  CPU: "
+                    << cpuTime
+                    << " mins\n";
+
+            std::cout << "  GPU: "
+                    << gpuTime
+                    << " mins\n";
+
+            std::cout << "  Difference: "
+                    << std::abs(cpuTime - gpuTime)
+                    << " mins\n";
+        }
+    }
+
+    // ---------------------------------------------------------
+    // Results
+    // ---------------------------------------------------------
+
+    std::cout << std::fixed
+              << std::setprecision(3);
+
+    std::cout << "\n========== Benchmark ==========\n";
+
+    std::cout << "Routes: "
+              << routes.size()
+              << '\n';
+
+    std::cout << "Successful routes: "
+              << successfulRoutes
+              << '\n';
+
+    std::cout << "Matching CPU/GPU results: "
+              << matchingRoutes
+              << "/"
+              << routes.size()
+              << '\n';
+
+    std::cout << "\nCPU total: "
+              << totalCPUTime
+              << " ms\n";
+
+    std::cout << "CPU average: "
+              << totalCPUTime / routes.size()
+              << " ms/route\n";
+
+    std::cout << "\nGPU total: "
+              << totalGPUTime
+              << " ms\n";
+
+    std::cout << "GPU average: "
+              << totalGPUTime / routes.size()
+              << " ms/route\n";
+
+    std::cout << "\nGPU speedup: "
+              << totalCPUTime / totalGPUTime
+              << "x\n";
+
+    std::cout << "================================\n";
+
+    if (matchingRoutes != routes.size()) {
+        std::cerr
+            << "\nWARNING: CPU and GPU results do not all match.\n";
+        return 1;
+    }
 
     return 0;
 }

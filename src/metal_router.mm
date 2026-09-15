@@ -264,17 +264,7 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
 
     std::chrono::duration<double, std::milli> elapsed = end - start;
 
-    std::cout << std::fixed
-            << std::setprecision(3)
-            << "\nGPU routing time: "
-            << elapsed.count()
-            << " ms\n";
-
-    std::cout << "Frontier iterations: "
-            << iterationCount
-            << '\n';
-
     const std::uint32_t* results = static_cast<const std::uint32_t*>(travelTimesBuffer.contents);
 
-    return static_cast<float>(results[targetNode]) / 1000.0f;
+    return static_cast<float>(results[targetNode]) / (1000.0f*60.0f);
 }
