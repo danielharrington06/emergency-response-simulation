@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <chrono>
 
 bool isVehicleCompatible(VehicleType vehicleType, IncidentType incidentType) {
     switch (incidentType) {
@@ -123,9 +124,27 @@ void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availabl
         return;
     }
 
+    auto routeStart = std::chrono::steady_clock::now();
     std::vector<std::vector<double>> responseTimes = calculateResponseTimes(availableVehicles, incidentsOfThisPriority);
+    auto routeEnd = std::chrono::steady_clock::now();
 
+    auto assignmentStart = std::chrono::steady_clock::now();
     std::vector<Assignment> assignments = findOptimalAssignmentHungarian(responseTimes);
+    auto assignmentEnd = std::chrono::steady_clock::now();
+
+    std::chrono::duration<double, std::milli> routeElapsed =
+    routeEnd - routeStart;
+
+    std::chrono::duration<double, std::milli> assignmentElapsed =
+        assignmentEnd - assignmentStart;
+
+    std::cout << "  Route calculations: "
+            << routeElapsed.count()
+            << " ms\n";
+
+    std::cout << "  Hungarian assignment: "
+            << assignmentElapsed.count()
+            << " ms\n";
 
     for (const Assignment& assignment : assignments) {
         uint32_t vehicleId = availableVehicles.at(assignment.vehicleIndex);
@@ -181,26 +200,30 @@ void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, 
             break;
         }
     }
+
     
     // start with every available vehicle
     std::vector<uint32_t> availableVehicles = buildAvailableVehicles();
     if (availableVehicles.empty()) return;
-
+    
     // assign high priority incidents
+    std::cout << "\nHigh Severity:\n";
     assignAvailableVehiclesToIncidents(availableVehicles, highSeverityIncidents);
-
+    
     // rebuild list of remaining available vehicles
     availableVehicles = buildAvailableVehicles();
     if (availableVehicles.empty()) return;
-
+    
     // assign medium priority incidents
+    std::cout << "\nMedium Severity:\n";
     assignAvailableVehiclesToIncidents(availableVehicles, mediumSeverityIncidents);
-
+    
     // rebuild list of remaining available vehicles
     availableVehicles = buildAvailableVehicles();
     if (availableVehicles.empty()) return;
-
+    
     // assign low priority incidents
+    std::cout << "\nLow Severity:\n";
     assignAvailableVehiclesToIncidents(availableVehicles, lowSeverityIncidents);
 }
 
