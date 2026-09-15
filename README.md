@@ -58,7 +58,7 @@ xcrun -sdk macosx metal \
     metal/routing.metal \
     -o bin/routing.air
 
-xcrun -sdk macosx metallib \
+xcrun -sdk macosx metallib -c \
     bin/routing.air \
     -o bin/routing.metallib
 
