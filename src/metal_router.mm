@@ -107,7 +107,17 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
                             length:graph.edgeTravelTimes.size() * sizeof(float)
                           options:MTLResourceStorageModeShared];
 
-    std::vector<std::uint32_t> frontier = {sourceNode};
+    std::vector<std::uint32_t> initialFrontier = {sourceNode};
+    id<MTLBuffer> frontierBuffer =
+        [state->device
+            newBufferWithBytes:initialFrontier.data()
+                        length:nodeCount * sizeof(std::uint32_t)
+                    options:MTLResourceStorageModeShared];
+
+    id<MTLBuffer> nextFrontierBuffer =
+        [state->device
+            newBufferWithLength:nodeCount * sizeof(std::uint32_t)
+                        options:MTLResourceStorageModeShared];
 
     std::vector<std::uint32_t> initialTravelTimes(nodeCount, INF);
 
@@ -127,22 +137,40 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         [state->device newBufferWithBytes:improved.data()
                             length:improved.size() * sizeof(std::uint32_t)
                         options:MTLResourceStorageModeShared];
+    
+    std::uint32_t initialFrontierCount = 0;
 
-    while (!frontier.empty()) {
+    id<MTLBuffer> nextFrontierCountBuffer =
+        [state->device
+            newBufferWithBytes:&initialFrontierCount
+                        length:sizeof(std::uint32_t)
+                    options:MTLResourceStorageModeShared];
 
-        id<MTLBuffer> frontierBuffer =
-        [state->device newBufferWithBytes:frontier.data()
-                            length:frontier.size() *
-                                   sizeof(std::uint32_t)
-                           options:MTLResourceStorageModeShared];
+    if (frontierBuffer == nil ||
+        travelTimesBuffer == nil ||
+        improvedBuffer == nil) {
+        throw std::runtime_error(
+            "Failed to create routing buffers"
+        );
+    }
+    
+    std::size_t frontierCount = 1;
 
-        if (frontierBuffer == nil ||
-            travelTimesBuffer == nil ||
-            improvedBuffer == nil) {
-            throw std::runtime_error(
-                "Failed to create routing buffers"
-            );
-        }
+    while (frontierCount > 0) {
+
+        std::memset(
+            improvedBuffer.contents,
+            0,
+            improved.size() * sizeof(std::uint32_t)
+        );
+
+        std::uint32_t zero = 0;
+
+        std::memcpy(
+            nextFrontierCountBuffer.contents,
+            &zero,
+            sizeof(std::uint32_t)
+        );
 
         id<MTLCommandBuffer> commandBuffer = [state->commandQueue commandBuffer];
 
@@ -151,17 +179,22 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         [encoder setComputePipelineState:state->pipeline];
 
         [encoder setBuffer:nodeOffsetsBuffer offset:0 atIndex:0];
-
         [encoder setBuffer:edgeDestinationsBuffer offset:0 atIndex:1];
         [encoder setBuffer:edgeTravelTimesBuffer offset:0 atIndex:2];
         [encoder setBuffer:frontierBuffer offset:0 atIndex:3];
         [encoder setBuffer:travelTimesBuffer offset:0 atIndex:4];
         [encoder setBuffer:improvedBuffer offset:0 atIndex:5];
+        [encoder setBuffer:nextFrontierBuffer offset:0 atIndex:6];
+        [encoder setBuffer:nextFrontierCountBuffer offset:0 atIndex:7];
 
-        const NSUInteger threadgroupSize = std::min(static_cast<NSUInteger>(frontier.size()), state->pipeline.maxTotalThreadsPerThreadgroup );
+        const NSUInteger threadgroupSize =
+            std::min(
+                static_cast<NSUInteger>(frontierCount),
+                state->pipeline.maxTotalThreadsPerThreadgroup
+            );
 
         [encoder dispatchThreads:
-            MTLSizeMake(frontier.size(), 1, 1)
+            MTLSizeMake(frontierCount, 1, 1)
             threadsPerThreadgroup:
             MTLSizeMake(threadgroupSize, 1, 1)];
 
@@ -176,23 +209,11 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
             );
         }
 
-        const std::uint32_t* improvedResults = static_cast<const std::uint32_t*>(improvedBuffer.contents);
+        const std::uint32_t* countResult = static_cast<const std::uint32_t*>(nextFrontierCountBuffer.contents);
 
-        std::vector<std::uint32_t> nextFrontier;
+        frontierCount = *countResult;
 
-        for (std::uint32_t node = 0; node < nodeCount; ++node) {
-            if (improvedResults[node] != 0) {
-                nextFrontier.push_back(node);
-            }
-        }
-
-        std::memset(
-            improvedBuffer.contents,
-            0,
-            improved.size() * sizeof(std::uint32_t)
-        );
-
-        frontier = std::move(nextFrontier);
+        std::swap(frontierBuffer, nextFrontierBuffer);
     }
 
     const std::uint32_t* results = static_cast<const std::uint32_t*>(travelTimesBuffer.contents);
