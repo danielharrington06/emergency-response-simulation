@@ -2,20 +2,8 @@
 
 using namespace metal;
 
-kernel void calculate_degrees(
-    device const uint* nodeOffsets [[buffer(0)]],
-    device uint* degrees [[buffer(1)]],
-    uint nodeIndex [[thread_position_in_grid]]
-) {
-    degrees[nodeIndex] = nodeOffsets[nodeIndex + 1] - nodeOffsets[nodeIndex];
-}
-
 // for the node on the frontier, relaxes all outgoing edges
 // has to use integer travel times, which are 1,000,000 times the actual float time to have atomic_fetch_min_explicit work
-#include <metal_stdlib>
-
-using namespace metal;
-
 kernel void relax_frontier(
     device const uint* nodeOffsets [[buffer(0)]],
     device const uint* edgeDestinations [[buffer(1)]],
@@ -57,4 +45,16 @@ kernel void relax_frontier(
             }
         }
     }
+}
+
+// resets the improved flags more efficiently
+kernel void reset_improved(
+    device const uint* frontier [[buffer(0)]],
+    device atomic_uint* improved [[buffer(1)]],
+
+    uint frontierIndex [[thread_position_in_grid]]
+) {
+    uint node = frontier[frontierIndex];
+
+    atomic_store_explicit(&improved[node], 0, memory_order_relaxed);
 }

@@ -26,7 +26,9 @@ For the graph network to work efficiently on the GPU, it needs fixed length arra
 
 Performance Improvements
 - had kernel process next frontier (750->530ms)
-- establishing a safe global termination (530->420ms)
+- establishing a safe global termination: made GPU 0.15x speedup
+- resetting flags through a kernel: made GPU 0.18x speedup
+- discovered that roughly 94% of the processing time is outside the GPU execution itself
 
 ## Benchmarking
 To give reliable results, benchmarking should be carried out on the same seed.

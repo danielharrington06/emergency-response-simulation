@@ -1,6 +1,7 @@
 #include "../include/metal_router.hpp"
 
 #import <Metal/Metal.h>
+#import <QuartzCore/QuartzCore.h>
 
 #include <algorithm>
 #include <chrono>
@@ -19,6 +20,7 @@ struct MetalRouter::MetalState {
     id<MTLDevice> device;
     id<MTLCommandQueue> commandQueue;
     id<MTLComputePipelineState> pipeline;
+    id<MTLComputePipelineState> resetPipeline;
 
     id<MTLBuffer> nodeOffsetsBuffer;
     id<MTLBuffer> edgeDestinationsBuffer;
@@ -66,6 +68,20 @@ struct MetalRouter::MetalState {
             throw std::runtime_error(
                 "Failed to create compute pipeline"
             );
+        }
+
+        id<MTLFunction> resetFunction =
+            [library newFunctionWithName:@"reset_improved"];
+
+        if (resetFunction == nil) {
+            throw std::runtime_error("Failed to find reset_improved kernel");
+        }
+
+        resetPipeline =
+            [device newComputePipelineStateWithFunction:resetFunction error:nil];
+
+        if (resetPipeline == nil) {
+            throw std::runtime_error("Failed to create reset pipeline");
         }
 
         nodeOffsetsBuffer =
@@ -142,10 +158,7 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
                         length:initialTravelTimes.size() * sizeof(std::uint32_t)
                        options:MTLResourceStorageModeShared];
     
-    std::vector<std::uint32_t> improved(
-        nodeCount,
-        0
-    );
+    std::vector<std::uint32_t> improved(nodeCount, 0);
     
     id<MTLBuffer> improvedBuffer =
         [state->device newBufferWithBytes:improved.data()
@@ -182,16 +195,11 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
 
     std::size_t iterationCount = 0;
 
+    double totalGPUExecutionTime = 0.0;
     auto start = std::chrono::steady_clock::now();
 
     while (frontierCount > 0) {
         ++iterationCount;
-
-        std::memset(
-            improvedBuffer.contents,
-            0,
-            improved.size() * sizeof(std::uint32_t)
-        );
 
         std::uint32_t zero = 0;
 
@@ -208,6 +216,26 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         );
 
         id<MTLCommandBuffer> commandBuffer = [state->commandQueue commandBuffer];
+
+        // Reset improved flags for the current frontier
+
+        id<MTLComputeCommandEncoder> resetEncoder = [commandBuffer computeCommandEncoder];
+
+        [resetEncoder setComputePipelineState:state->resetPipeline];
+
+        [resetEncoder setBuffer:frontierBuffer offset:0 atIndex:0];
+        [resetEncoder setBuffer:improvedBuffer offset:0 atIndex:1];
+
+        const NSUInteger resetThreadgroupSize = std::min(static_cast<NSUInteger>(frontierCount), state->resetPipeline.maxTotalThreadsPerThreadgroup);
+
+        [resetEncoder dispatchThreads:
+            MTLSizeMake(frontierCount, 1, 1)
+            threadsPerThreadgroup:
+            MTLSizeMake(resetThreadgroupSize, 1, 1)];
+
+        [resetEncoder endEncoding];
+
+        // Relax the current frontier
 
         id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
 
@@ -245,12 +273,12 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
             );
         }
 
-        const std::uint32_t* countResult = static_cast<const std::uint32_t*>(nextFrontierCountBuffer.contents);
+        totalGPUExecutionTime += (commandBuffer.GPUEndTime - commandBuffer.GPUStartTime) * 1000.0;
 
+        const std::uint32_t* countResult = static_cast<const std::uint32_t*>(nextFrontierCountBuffer.contents);
         frontierCount = *countResult;
 
         const std::uint32_t* minTimeResult = static_cast<const std::uint32_t*>(nextFrontierMinTimeBuffer.contents);
-
         const std::uint32_t targetTime = static_cast<const std::uint32_t*>(travelTimesBuffer.contents)[targetNode];
 
         if (frontierCount == 0 || targetTime <= *minTimeResult) {
@@ -260,9 +288,17 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
         std::swap(frontierBuffer, nextFrontierBuffer);
     }
 
+    std::cout << "GPU execution time: "
+          << totalGPUExecutionTime
+          << " ms\n";
+
     auto end = std::chrono::steady_clock::now();
 
     std::chrono::duration<double, std::milli> elapsed = end - start;
+
+    std::cout << "GPU Wall time: "
+            << elapsed.count()
+            << " ms\n";
 
     const std::uint32_t* results = static_cast<const std::uint32_t*>(travelTimesBuffer.contents);
 
