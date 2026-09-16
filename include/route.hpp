@@ -4,6 +4,11 @@
 #include <vector>
 #include <iostream>
 
+struct RouteNodePair {
+    unsigned int source;
+    unsigned int target;
+};
+
 enum class RouteStatus {
     Found,
     NoRoute,

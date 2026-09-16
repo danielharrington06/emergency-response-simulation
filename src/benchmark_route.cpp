@@ -1,4 +1,4 @@
-#include "../include/route_benchmark.hpp"
+#include "../include/benchmark_route.hpp"
 
 #include "../include/road_network.hpp"
 #include "../include/osm_loader.hpp"
@@ -17,7 +17,7 @@
 const unsigned int BENCHMARK_SEED = 12345;
 const unsigned int DEFAULT_BENCHMARK_ROUTE_COUNT = 10;
 
-int run_benchmark(int argc, char *argv[]) {
+int runRouteBenchmark(int argc, char *argv[]) {
 
     unsigned int benchmark_route_count = DEFAULT_BENCHMARK_ROUTE_COUNT;
 
@@ -49,7 +49,7 @@ int run_benchmark(int argc, char *argv[]) {
         static_cast<unsigned int>(network.nodeCount() - 1)
     );
 
-    std::vector<RoutePair> routes;
+    std::vector<RouteNodePair> routes;
     routes.reserve(benchmark_route_count);
 
     for (unsigned int i = 0;
@@ -90,9 +90,9 @@ int run_benchmark(int argc, char *argv[]) {
     std::vector<float> cpuResults;
     cpuResults.reserve(routes.size());
 
-    for (const RoutePair& routePair : routes) {
+    for (const RouteNodePair& routePair : routes) {
 
-        Route route = findRoute(
+        Route route = findRouteCPU(
             network,
             routePair.source,
             routePair.target
@@ -120,14 +120,14 @@ int run_benchmark(int argc, char *argv[]) {
     std::vector<float> gpuResults;
     gpuResults.reserve(routes.size());
 
-    for (const RoutePair& routePair : routes) {
+    for (const RouteNodePair& routePair : routes) {
 
-        float time = metalRouter.route(
+        Route route = metalRouter.findRouteGPU(
             routePair.source,
             routePair.target
         );
 
-        gpuResults.push_back(time);
+        gpuResults.push_back(route.totalTravelTime);
     }
 
     auto GPUend = std::chrono::steady_clock::now();
@@ -171,7 +171,7 @@ int run_benchmark(int argc, char *argv[]) {
                     << cpuTime
                     << " mins\n";
                     
-            Route route = findRoute(
+            Route route = findRouteCPU(
                 network,
                 routes[i].source,
                 routes[i].target
@@ -201,14 +201,15 @@ int run_benchmark(int argc, char *argv[]) {
               << std::setprecision(3);
 
     std::cout << "\n========== Benchmark ==========\n";
+    std::cout << "Task: Route Benchmark\n";
+    
+        std::cout << "Routes: "
+                  << routes.size()
+                  << '\n';
 
     auto now = std::chrono::system_clock::now();
     std::time_t time = std::chrono::system_clock::to_time_t(now);
-    std::cout << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << '\n';
-
-    std::cout << "Routes: "
-              << routes.size()
-              << '\n';
+    std::cout << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "\n\n";
 
     std::cout << "Successful routes: "
               << successfulRoutes

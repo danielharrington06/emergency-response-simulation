@@ -3,15 +3,19 @@
 #include "emergency_vehicle.hpp"
 #include "incident.hpp"
 #include "road_network.hpp"
+#include "route.hpp"
 
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 struct DispatchAssignment {
     uint32_t vehicle;
     uint32_t incident;
     double responseTime;
 };
+
+using RouteFunction = std::function<Route(uint32_t, uint32_t)>;
 
 class Dispatch {
 
@@ -37,9 +41,9 @@ public:
     const EmergencyVehicle& getVehicle(uint32_t id) const;
     const Incident& getIncident(uint32_t id) const;
 
-    std::vector<std::vector<double>> calculateResponseTimes(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) const;
-    void assignAvailableVehiclesToIncidents(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority);
-    void findOptimalAssignment();
+    std::vector<std::vector<double>> calculateResponseTimes(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction) const;
+    void assignAvailableVehiclesToIncidents(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction);
+    void findOptimalAssignment(RouteFunction routeFunction);
 
     size_t incidentCount() const;
     size_t vehicleCount() const;

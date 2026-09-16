@@ -74,8 +74,8 @@ const Incident& Dispatch::getIncident(uint32_t id) const {
     return incidents.at(id);
 }
 
-std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) const {
-    std::vector<std::vector<double>> responseTimes(availableVehicles.size(), std::vector<double>(incidentsOfThisPriority.size()));
+std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction) const {
+    std::vector<std::vector<double>> responseTimes(givenVehicles.size(), std::vector<double>(givenIncidents.size()));
 
     std::size_t totalNodesVisited = 0;
     std::size_t routeCount = 0;
@@ -86,11 +86,11 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
 
     const double infinity = std::numeric_limits<double>::infinity();
 
-    for (size_t i = 0; i < availableVehicles.size(); i++) {
-        uint32_t vehicleId = availableVehicles.at(i);
+    for (size_t i = 0; i < givenVehicles.size(); i++) {
+        uint32_t vehicleId = givenVehicles.at(i);
 
-        for (size_t j = 0; j < incidentsOfThisPriority.size(); j++) {
-            uint32_t incidentId = incidentsOfThisPriority.at(j);
+        for (size_t j = 0; j < givenIncidents.size(); j++) {
+            uint32_t incidentId = givenIncidents.at(j);
 
             const EmergencyVehicle& vehicle = vehicles.at(vehicleId);
 
@@ -103,8 +103,7 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
                 continue;
             }
 
-            Route route = findRoute(
-                network,
+            Route route = routeFunction(
                 vehicle.location,
                 incident.location
             );
@@ -122,48 +121,20 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
             }
         }
     }
-    // for debugging - remove for larger networks and incident-vehicle counts
-    //printResponseTimesMatrix(responseTimes);
-    std::cout << "  Routes calculated: " << routeCount << '\n';
-    std::cout << "  Average distance per route: "
-          << totalDistance / routeCount
-          << " miles\n";
-
-    std::cout << "  Average travel time per route: "
-            << totalTime / routeCount
-            << " minutes\n";
-
-    std::cout << "  Average heuristic: "
-          << totalHeuristic / routeCount
-          << " minutes\n";
-
-    std::cout << "  Heuristic / actual time: "
-            << (totalHeuristic / totalTime) * 100.0
-            << "%\n";
-    std::cout << "  Nodes visited: "
-          << totalNodesVisited
-          << '\n';
-
-    if (routeCount > 0) {
-        std::cout << "  Average nodes per route: "
-                << static_cast<double>(totalNodesVisited)
-                    / routeCount
-                << '\n';
-    }
     return responseTimes;
 }
 
-void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority) {
+void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction) {
     // previously used exhuastive search but this was factorial time efficiency, so had to replace with ...
     //.. with hungarian assignment algorithm in assignment.cpp
 
-    if (availableVehicles.empty() ||
-        incidentsOfThisPriority.empty()) {
+    if (givenVehicles.empty() ||
+        givenIncidents.empty()) {
         return;
     }
 
     auto routeStart = std::chrono::steady_clock::now();
-    std::vector<std::vector<double>> responseTimes = calculateResponseTimes(availableVehicles, incidentsOfThisPriority);
+    std::vector<std::vector<double>> responseTimes = calculateResponseTimes(givenVehicles, givenIncidents, routeFunction);
     auto routeEnd = std::chrono::steady_clock::now();
 
     auto assignmentStart = std::chrono::steady_clock::now();
@@ -185,9 +156,9 @@ void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> availabl
             << " ms\n";
 
     for (const Assignment& assignment : assignments) {
-        uint32_t vehicleId = availableVehicles.at(assignment.vehicleIndex);
+        uint32_t vehicleId = givenVehicles.at(assignment.vehicleIndex);
 
-        uint32_t incidentId = incidentsOfThisPriority.at(assignment.incidentIndex);
+        uint32_t incidentId = givenIncidents.at(assignment.incidentIndex);
 
         double responseTime = responseTimes.at(assignment.vehicleIndex).at(assignment.incidentIndex);
 
@@ -211,7 +182,7 @@ std::vector<uint32_t> Dispatch::buildAvailableVehicles() { // gets a vector of t
     return availableVehicles;
 }
 
-void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, so all high first, then medium, then low, minimising total response time in each section
+void Dispatch::findOptimalAssignment(RouteFunction routeFunction) { // assigns vehicles in priority order, so all high first, then medium, then low, minimising total response time in each section
 
     vehicleAssignments.clear(); // probably will not want to do this when dynamically doing stuff 
 
@@ -246,7 +217,7 @@ void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, 
     
     // assign high priority incidents
     std::cout << "\nHigh Severity:\n";
-    assignAvailableVehiclesToIncidents(availableVehicles, highSeverityIncidents);
+    assignAvailableVehiclesToIncidents(availableVehicles, highSeverityIncidents, routeFunction);
     
     // rebuild list of remaining available vehicles
     availableVehicles = buildAvailableVehicles();
@@ -254,7 +225,7 @@ void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, 
     
     // assign medium priority incidents
     std::cout << "\nMedium Severity:\n";
-    assignAvailableVehiclesToIncidents(availableVehicles, mediumSeverityIncidents);
+    assignAvailableVehiclesToIncidents(availableVehicles, mediumSeverityIncidents, routeFunction);
     
     // rebuild list of remaining available vehicles
     availableVehicles = buildAvailableVehicles();
@@ -262,7 +233,7 @@ void Dispatch::findOptimalAssignment() { // assigns vehicles in priority order, 
     
     // assign low priority incidents
     std::cout << "\nLow Severity:\n";
-    assignAvailableVehiclesToIncidents(availableVehicles, lowSeverityIncidents);
+    assignAvailableVehiclesToIncidents(availableVehicles, lowSeverityIncidents, routeFunction);
 }
 
 

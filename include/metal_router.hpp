@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gpu_graph.hpp"
+#include "route.hpp"
 
 #include <cstdint>
 
@@ -10,10 +11,7 @@ public:
     MetalRouter(const GPUGraph& graph);
     ~MetalRouter();
 
-    float route(
-        std::uint32_t sourceNode,
-        std::uint32_t targetNode
-    );
+    Route findRouteGPU(std::uint32_t sourceNode, std::uint32_t targetNode);
 
 private:
     struct MetalState;

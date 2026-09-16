@@ -49,7 +49,7 @@ double heuristic(const RoadNetwork& network, uint32_t current, uint32_t destinat
     return distance / MAX_SPEED_MPH * 60.0;
 }
 
-Route findRoute(const RoadNetwork& network, uint32_t start, uint32_t destination) { // uses A* algorithm to find route
+Route findRouteCPU(const RoadNetwork& network, uint32_t start, uint32_t destination) { // uses A* algorithm to find route
     Route route;
 
     route.start = start;

@@ -129,7 +129,8 @@ clang++ -std=c++17 \
     src/assignment.cpp \
     src/gpu_graph.cpp \
     src/metal_router.mm \
-    src/route_benchmark.cpp \
+    src/benchmark_route.cpp \
+    src/benchmark_assignment.cpp \
     -framework Metal \
     -framework Foundation \
     -o bin/main

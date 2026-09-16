@@ -1,4 +1,4 @@
-#include "../include/route_benchmark.hpp"
+#include "../include/benchmark_route.hpp"
 
 #include <iostream>
 
@@ -6,7 +6,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Emergency Response Simulation\n";
     
-    int result = run_benchmark(argc, argv);
+    int result = runRouteBenchmark(argc, argv);
     
     if (result == 1) {
         return 1;

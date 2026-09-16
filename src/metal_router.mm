@@ -1,4 +1,5 @@
 #include "../include/metal_router.hpp"
+#include "../include/route.hpp"
 
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
@@ -199,7 +200,7 @@ double MetalRouter::calculateStraightlineDistance(std::uint32_t sourceNode, std:
     return distance;
 }
 
-float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
+Route MetalRouter::findRouteGPU(std::uint32_t sourceNode, std::uint32_t targetNode) {
     const GPUGraph& graph = state->graph;
 
     const std::size_t nodeCount = graph.nodeOffsets.size() - 1;
@@ -415,9 +416,17 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
 
     const std::uint32_t* results = static_cast<const std::uint32_t*>(travelTimesBuffer.contents);
 
+    Route route;
+    route.start = sourceNode;
+    route.destination = targetNode;
     if (results[targetNode] == INF) {
-        return std::numeric_limits<float>::infinity();
+        route.status = RouteStatus::NoRoute;
+        route.totalTravelTime = std::numeric_limits<float>::infinity();
+    }
+    else {
+        route.status = RouteStatus::Found;
+        route.totalTravelTime = static_cast<float>(results[targetNode]) / (1000.0f*60.0f);
     }
 
-    return static_cast<float>(results[targetNode]) / (1000.0f*60.0f);
+    return route;
 }
