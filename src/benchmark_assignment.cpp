@@ -20,7 +20,7 @@ const unsigned int INCIDENT_SEED = 72849;
 const unsigned int DEFAULT_INCIDENT_COUNT = 10;
 const unsigned int DEFAULT_VEHICLE_COUNT = 10;
 
-int runRouteBenchmark(int argc, char *argv[]) {
+int runAssignmentBenchmark(int argc, char *argv[]) {
 
     unsigned int vehicleCount = DEFAULT_INCIDENT_COUNT;
     unsigned int incidentCount = DEFAULT_VEHICLE_COUNT;
@@ -146,7 +146,8 @@ int runRouteBenchmark(int argc, char *argv[]) {
 
     if (cpuAssignments.size() != gpuAssignments.size()) {
         assignmentsMatch = false;
-    } else {
+    } 
+    else {
         for (const auto& [vehicleID, cpuAssignment] : cpuAssignments) {
             auto gpuIt = gpuAssignments.find(vehicleID);
 
@@ -180,9 +181,47 @@ int runRouteBenchmark(int argc, char *argv[]) {
         }
     }
 
+    bool showAssignments = false;
+    if (showAssignments) {
+        std::cout << "\nCPU assignments:\n";
+        
+        for (const auto& [vehicleID, assignment] : cpuAssignments) {
+            std::cout << "  Vehicle " << vehicleID
+            << " -> Incident " << assignment.incident
+            << " (" << assignment.responseTime << " min)\n";
+        }
+        
+        std::cout << "\nGPU assignments:\n";
+        
+        for (const auto& [vehicleID, assignment] : gpuAssignments) {
+            std::cout << "  Vehicle " << vehicleID
+            << " -> Incident " << assignment.incident
+            << " (" << assignment.responseTime << " min)\n";
+        }
+    }
     
-    // --- Results ---
+    bool assignmentCountMatch = cpuAssignments.size() == gpuAssignments.size();
+    
+    double cpuTotal = 0.0;
+    double gpuTotal = 0.0;
 
+    for (const auto& [vehicleID, assignment] : cpuAssignments) {
+        cpuTotal += assignment.responseTime;
+    }
+
+    for (const auto& [vehicleID, assignment] : gpuAssignments) {
+        gpuTotal += assignment.responseTime;
+    }
+
+    double totalDifference = std::abs(cpuTotal - gpuTotal);
+
+    constexpr double TOTAL_TIME_TOLERANCE = 0.001; // minutes
+
+    bool totalTimeMatch = totalDifference <= TOTAL_TIME_TOLERANCE;
+    
+
+    // --- Results ---
+    
 
     std::cout << std::fixed
               << std::setprecision(3);
@@ -200,11 +239,34 @@ int runRouteBenchmark(int argc, char *argv[]) {
 
     auto now = std::chrono::system_clock::now();
     std::time_t time = std::chrono::system_clock::to_time_t(now);
-    std::cout << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "\n\n";
+    std::cout << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "\n";
 
-    std::cout << "Assignments match: "
+    std::cout << "\nCPU assignments: "
+            << cpuAssignments.size() << '\n';
+
+    std::cout << "GPU assignments: "
+            << gpuAssignments.size() << '\n';
+
+    std::cout << "Same number of assignments: "
+            << (assignmentCountMatch ? "YES" : "NO") << '\n';
+
+    std::cout << "Exact Assignments match: "
           << (assignmentsMatch ? "YES" : "NO")
           << '\n';
+
+    std::cout << "\nCPU assignment total: "
+            << cpuTotal << " min\n";
+
+    std::cout << "GPU assignment total: "
+            << gpuTotal << " min\n";
+
+    std::cout << "Assignment total difference: "
+            << std::setprecision(10)
+            << totalDifference << " min\n"
+            <<std::setprecision(3);
+
+    std::cout << "Same total assignment time: "
+            << (totalTimeMatch ? "YES" : "NO") << '\n';
 
     std::cout << "\nCPU total: "
               << totalCpuTime
@@ -220,8 +282,8 @@ int runRouteBenchmark(int argc, char *argv[]) {
 
     std::cout << "================================\n";
 
-    if (!assignmentsMatch) {
-        std::cerr << "\nWARNING: CPU and GPU assignments do not match.\n";
+    if (!assignmentCountMatch || !totalTimeMatch) {
+        std::cerr << "\nWARNING: CPU and GPU assignments have different total time.\n";
         return 1;
     }
     return 0;

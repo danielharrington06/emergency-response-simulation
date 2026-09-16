@@ -125,6 +125,7 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
             }
         }
     }
+    
     return responseTimes;
 }
 
