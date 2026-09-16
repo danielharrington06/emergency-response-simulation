@@ -72,6 +72,8 @@ int main(int argc, char *argv[]) {
 
         routes.push_back({source, target});
     }
+    // to always push the hard route
+    routes.push_back({254518, 179231});
 
     std::cout << "\n-> Generated "
               << routes.size()
@@ -178,15 +180,17 @@ int main(int argc, char *argv[]) {
                     << cpuTime
                     << " mins\n";
                     
-            std::cout << "  GPU: "
-                    << gpuTime
-                    << " mins\n";
-
-            double distance = findRoute(
+            Route route = findRoute(
                 network,
                 routes[i].source,
                 routes[i].target
-            ).totalDistance;
+            );
+            std::cout << "\tNum Nodes: " << route.nodesVisited << '\n';
+                    
+            std::cout << "  GPU: "
+                    << gpuTime
+                    << " mins\n";
+            double distance = route.totalDistance;
         
             std::cout << "  Distance: "
                     << distance
