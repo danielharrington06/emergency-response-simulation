@@ -36,6 +36,13 @@ To give reliable results, benchmarking should be carried out on the same seed.
 ## Project Structure
 ```vbnet
 COMP0002-C-Coursework/
+├── data/
+│   ├── osm/
+│       └── county.osm.pbf
+│   ├── processed/
+│       ├── edges.csv
+│       ├── facilities.csv
+│       └── nodes.csv
 │
 ├── include/
 │   ├── assignment.hpp
