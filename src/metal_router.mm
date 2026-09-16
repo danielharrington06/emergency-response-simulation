@@ -13,7 +13,7 @@
 #include <vector>
 #include <iomanip>
 
-constexpr std::uint32_t MAX_ITERATIONS = 2000;
+constexpr std::uint32_t MAX_ITERATIONS = 2500;
 constexpr std::uint32_t THREADS_PER_THREADGROUP = 256;
 
 struct MetalRouter::MetalState {
@@ -260,7 +260,10 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
 
     id<MTLCommandBuffer> commandBuffer = [state->commandQueue commandBuffer];
 
-    for (std::uint32_t iteration = 0; iteration < MAX_ITERATIONS; ++iteration) {
+    double distance = ;
+    std::uint32_t iterations = round(min(MAX_ITERATIONS, 50.25 * distance + 708.74));
+
+    for (std::uint32_t iteration = 0; iteration < iterations; ++iteration) {
 
         // reset routing state
 
