@@ -13,7 +13,7 @@
 #include <vector>
 #include <iomanip>
 
-constexpr std::uint32_t MAX_ITERATIONS = 2500;
+constexpr std::uint32_t MAX_ITERATIONS = 2000;
 constexpr std::uint32_t THREADS_PER_THREADGROUP = 256;
 
 struct MetalRouter::MetalState {

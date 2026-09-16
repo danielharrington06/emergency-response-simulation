@@ -65,8 +65,6 @@ int run_benchmark(int argc, char *argv[]) {
 
         routes.push_back({source, target});
     }
-    // to always push the hard route
-    routes.push_back({254518, 179231});
 
     std::cout << "\n-> Generated "
               << routes.size()
