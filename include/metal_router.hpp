@@ -12,7 +12,7 @@ public:
     ~MetalRouter();
 
     Route findRouteGPU(std::uint32_t sourceNode, std::uint32_t targetNode);
-    std::vector<Route> findRouteGPU_multiNodes(std::uint32_t sourceNode, const std::vector<std::uint32_t>& targetNodes);
+    std::vector<Route> findRoutesGpuMultiNodes(std::uint32_t sourceNode, const std::vector<std::uint32_t>& targetNodes);
 
 private:
     struct MetalState;

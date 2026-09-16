@@ -409,7 +409,7 @@ Route MetalRouter::findRouteGPU(std::uint32_t sourceNode, std::uint32_t targetNo
 }
 
 
-std::vector<Route> MetalRouter::findRouteGPU_multiNodes(std::uint32_t sourceNode, const std::vector<std::uint32_t>& targetNodes) {
+std::vector<Route> MetalRouter::findRoutesGpuMultiNodes(std::uint32_t sourceNode, const std::vector<std::uint32_t>& targetNodes) {
     const GPUGraph& graph = state->graph;
 
     const std::size_t nodeCount = graph.nodeOffsets.size() - 1;

@@ -16,6 +16,7 @@ struct DispatchAssignment {
 };
 
 using RouteFunction = std::function<Route(uint32_t, uint32_t)>;
+using RouteFunctionPointToMany = std::function<std::vector<Route>(uint32_t, std::vector<uint32_t>)>;
 
 class Dispatch {
 
@@ -41,9 +42,13 @@ public:
     const Incident& getIncident(uint32_t id) const;
     const std::unordered_map<uint32_t, DispatchAssignment>& getAssignments() const;
 
-    std::vector<std::vector<double>> calculateResponseTimes(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction) const;
     void assignAvailableVehiclesToIncidents(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, std::vector<std::vector<double>> responseTimes);
+
+    std::vector<std::vector<double>> calculateResponseTimes(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction) const;
     void findOptimalAssignment(RouteFunction routeFunction);
+
+    std::vector<std::vector<double>> calculateResponseTimesPointToMany(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunctionPointToMany& routeFunction) const;
+    void findOptimalAssignmentPointToMany(RouteFunctionPointToMany routeFunction);
 
     size_t incidentCount() const;
     size_t vehicleCount() const;

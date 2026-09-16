@@ -20,7 +20,16 @@ const unsigned int INCIDENT_SEED = 72849;
 const unsigned int DEFAULT_INCIDENT_COUNT = 10;
 const unsigned int DEFAULT_VEHICLE_COUNT = 10;
 
+int runAssignmentBenchmark(int argc, char *argv[], bool multiGpuAlgorithm);
+
 int runAssignmentBenchmarkPTP(int argc, char *argv[]) {
+    return runAssignmentBenchmark(argc, argv, false);
+}
+int runAssignmentBenchmarkPTM(int argc, char *argv[]) {
+    return runAssignmentBenchmark(argc, argv, true);
+}
+
+int runAssignmentBenchmark(int argc, char *argv[], bool multiGpuAlgorithm) {
 
     unsigned int vehicleCount = DEFAULT_INCIDENT_COUNT;
     unsigned int incidentCount = DEFAULT_VEHICLE_COUNT;
@@ -100,40 +109,63 @@ int runAssignmentBenchmarkPTP(int argc, char *argv[]) {
                 destination
             );
         };
-
-    RouteFunction gpuRoute =
-        [&](uint32_t source, uint32_t destination) -> Route {
-
-            return metalRouter.findRouteGPU(
-                source,
-                destination
-            );
-        };
-
-
+        
+        
     // --- CPU benchmark ---
-
-
+    
+    
     std::cout << "\n-> Running Assignment on CPU\n";
-
+    
     auto cpuStart = std::chrono::steady_clock::now();
     cpuDispatch.findOptimalAssignment(cpuRoute);
     auto cpuEnd = std::chrono::steady_clock::now();
-
+    
     std::chrono::duration<double, std::milli> cpuElapsed = cpuEnd - cpuStart;
     double totalCpuTime = cpuElapsed.count();
-
-
+    
+    
     // --- GPU Benchmark---
+    
 
+    double totalGpuTime = 0.0;
+        
+    if (!multiGpuAlgorithm) { // regular point to point
+        RouteFunction gpuRoute =
+            [&](uint32_t source, uint32_t destination) -> Route {
+    
+                return metalRouter.findRouteGPU(
+                    source,
+                    destination
+                );
+            };
+            
+        std::cout << "\n-> Running Assignment on GPU\n";
+        auto gpuStart = std::chrono::steady_clock::now();
+        gpuDispatch.findOptimalAssignment(gpuRoute);
+        auto gpuEnd = std::chrono::steady_clock::now();
+    
+        std::chrono::duration<double, std::milli> gpuElapsed = gpuEnd - gpuStart;
+        totalGpuTime = gpuElapsed.count();
+    }
+    else {
+        RouteFunctionPointToMany gpuRoute =
+            [&](uint32_t source,
+                const std::vector<uint32_t>& targets) -> std::vector<Route> {
 
-    std::cout << "\n-> Running Assignment on GPU\n";
-    auto gpuStart = std::chrono::steady_clock::now();
-    gpuDispatch.findOptimalAssignment(gpuRoute);
-    auto gpuEnd = std::chrono::steady_clock::now();
+                return metalRouter.findRoutesGpuMultiNodes(
+                    source,
+                    targets
+                );
+            };
 
-    std::chrono::duration<double, std::milli> gpuElapsed = gpuEnd - gpuStart;
-    double totalGpuTime = gpuElapsed.count();
+        std::cout << "\n-> Running Assignment on GPU\n";
+        auto gpuStart = std::chrono::steady_clock::now();
+        gpuDispatch.findOptimalAssignmentPointToMany(gpuRoute);
+        auto gpuEnd = std::chrono::steady_clock::now();
+    
+        std::chrono::duration<double, std::milli> gpuElapsed = gpuEnd - gpuStart;
+        totalGpuTime = gpuElapsed.count();  
+    }
 
 
     // --- Verify results ---
@@ -143,6 +175,26 @@ int runAssignmentBenchmarkPTP(int argc, char *argv[]) {
 
     const auto& cpuAssignments = cpuDispatch.getAssignments();
     const auto& gpuAssignments = gpuDispatch.getAssignments();
+
+    bool assignmentCountMatch = cpuAssignments.size() == gpuAssignments.size();
+
+    double cpuTotal = 0.0;
+    double gpuTotal = 0.0;
+
+    for (const auto& [vehicleID, assignment] : cpuAssignments) {
+        cpuTotal += assignment.responseTime;
+    }
+
+    for (const auto& [vehicleID, assignment] : gpuAssignments) {
+        gpuTotal += assignment.responseTime;
+    }
+
+    double totalDifference = std::abs(cpuTotal - gpuTotal);
+
+    constexpr double TOTAL_TIME_TOLERANCE = 0.001; // minutes
+
+    bool totalTimeMatch = totalDifference <= TOTAL_TIME_TOLERANCE;
+
 
     if (cpuAssignments.size() != gpuAssignments.size()) {
         assignmentsMatch = false;
@@ -158,8 +210,8 @@ int runAssignmentBenchmarkPTP(int argc, char *argv[]) {
 
             const DispatchAssignment& gpuAssignment = gpuIt->second;
 
-            if (cpuAssignment.incident != gpuAssignment.incident ||
-                std::abs(cpuAssignment.responseTime - gpuAssignment.responseTime) > 0.001) {
+            if (!totalTimeMatch && (cpuAssignment.incident != gpuAssignment.incident ||
+                std::abs(cpuAssignment.responseTime - gpuAssignment.responseTime) > 0.001)) {
 
                 assignmentsMatch = false;
 
@@ -199,26 +251,6 @@ int runAssignmentBenchmarkPTP(int argc, char *argv[]) {
             << " (" << assignment.responseTime << " min)\n";
         }
     }
-    
-    bool assignmentCountMatch = cpuAssignments.size() == gpuAssignments.size();
-    
-    double cpuTotal = 0.0;
-    double gpuTotal = 0.0;
-
-    for (const auto& [vehicleID, assignment] : cpuAssignments) {
-        cpuTotal += assignment.responseTime;
-    }
-
-    for (const auto& [vehicleID, assignment] : gpuAssignments) {
-        gpuTotal += assignment.responseTime;
-    }
-
-    double totalDifference = std::abs(cpuTotal - gpuTotal);
-
-    constexpr double TOTAL_TIME_TOLERANCE = 0.001; // minutes
-
-    bool totalTimeMatch = totalDifference <= TOTAL_TIME_TOLERANCE;
-    
 
     // --- Results ---
     

@@ -129,20 +129,71 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
     return responseTimes;
 }
 
+std::vector<std::vector<double>> Dispatch::calculateResponseTimesPointToMany(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunctionPointToMany& routeFunction) const {
+    const double infinity = std::numeric_limits<double>::infinity();
+
+    std::vector<std::vector<double>> responseTimes(givenVehicles.size(), std::vector<double>(givenIncidents.size(), infinity));
+
+    for (size_t i = 0; i < givenVehicles.size(); i++) {
+        uint32_t vehicleId = givenVehicles.at(i);
+        const EmergencyVehicle& vehicle = vehicles.at(vehicleId);
+
+        std::vector<uint32_t> targetNodes;
+        std::vector<std::size_t> incidentIndices;
+
+        // this just finds all the relevant incidents and adds them
+        for (std::size_t j = 0; j < givenIncidents.size(); j++) {
+            uint32_t incidentId = givenIncidents.at(j);
+            const Incident& incident = incidents.at(incidentId);
+
+            if (!isVehicleCompatible(vehicle.type, incident.type)) {
+                continue;
+            }
+
+            targetNodes.push_back(incident.location);
+            incidentIndices.push_back(j);
+        }
+        
+        if (targetNodes.empty()) {
+            continue;
+        }
+
+        // just one route functino call with this method
+        std::vector<Route> routes = routeFunction(vehicle.location, targetNodes);
+        
+        if (routes.size() != targetNodes.size()) {
+            throw std::runtime_error(
+                "Point-to-many route function returned an unexpected number of routes"
+            );
+        }
+
+        for (std::size_t k = 0; k < routes.size(); ++k) {
+
+            std::size_t incidentIndex = incidentIndices.at(k);
+
+            if (routes.at(k).status == RouteStatus::Found) {
+                responseTimes.at(i).at(incidentIndex) = routes.at(k).totalTravelTime;
+            }
+        }
+    }
+    
+    return responseTimes;
+}
+
 void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, std::vector<std::vector<double>> responseTimes) {
     // previously used exhuastive search but this was factorial time efficiency, so had to replace with ...
     //.. with hungarian assignment algorithm in assignment.cpp
 
-    if (givenVehicles.empty() ||
-        givenIncidents.empty()) {
+    if (givenVehicles.empty() || givenIncidents.empty()) {
         return;
     }
 
+    // compute best assignments with hungarian method
     std::vector<Assignment> assignments = findOptimalAssignmentHungarian(responseTimes);
 
+    // now apply the assignments
     for (const Assignment& assignment : assignments) {
         uint32_t vehicleId = givenVehicles.at(assignment.vehicleIndex);
-
         uint32_t incidentId = givenIncidents.at(assignment.incidentIndex);
 
         double responseTime = responseTimes.at(assignment.vehicleIndex).at(assignment.incidentIndex);
@@ -246,6 +297,78 @@ void Dispatch::findOptimalAssignment(RouteFunction routeFunction) { // assigns v
     std::cout << "\nLow Severity:\n";
     t1 = std::chrono::steady_clock::now();
     std::vector<std::vector<double>> responseTimesLow = calculateResponseTimes(availableVehicles, lowSeverityIncidents, routeFunction);
+    t2 = std::chrono::steady_clock::now();
+    assignAvailableVehiclesToIncidents(availableVehicles, lowSeverityIncidents, responseTimesLow);
+    t3 = std::chrono::steady_clock::now();
+
+    analyseAssignmentTimings(t1, t2, t3);
+}
+
+void Dispatch::findOptimalAssignmentPointToMany(RouteFunctionPointToMany routeFunction) { // assigns vehicles in priority order, so all high first, then medium, then low, minimising total response time in each section
+
+    vehicleAssignments.clear(); // probably will not want to do this when dynamically doing stuff 
+
+    // deal with no vehicles or no incidents
+    if (vehicles.empty() || incidents.empty()) {
+        return;
+    }
+
+    // group incidents by severity
+    std::vector<uint32_t> highSeverityIncidents;
+    std::vector<uint32_t> mediumSeverityIncidents;
+    std::vector<uint32_t> lowSeverityIncidents;
+    
+    for (const Incident& incident : incidents) {
+        switch(incident.severity) {
+            case IncidentSeverity::High:
+            highSeverityIncidents.push_back(incident.id);
+            break;
+            case IncidentSeverity::Medium:
+            mediumSeverityIncidents.push_back(incident.id);
+            break;
+            case IncidentSeverity::Low:
+            lowSeverityIncidents.push_back(incident.id);
+            break;
+        }
+    }
+
+    
+    // start with every available vehicle
+    std::vector<uint32_t> availableVehicles = buildAvailableVehicles();
+    if (availableVehicles.empty()) return;
+    
+    // assign high priority incidents
+    std::cout << "\nHigh Severity:\n";
+    auto t1 = std::chrono::steady_clock::now();
+    std::vector<std::vector<double>> responseTimesHigh = calculateResponseTimesPointToMany(availableVehicles, highSeverityIncidents, routeFunction);
+    auto t2 = std::chrono::steady_clock::now();
+    assignAvailableVehiclesToIncidents(availableVehicles, highSeverityIncidents, responseTimesHigh);
+    auto t3 = std::chrono::steady_clock::now();
+
+    analyseAssignmentTimings(t1, t2, t3);
+    
+    // rebuild list of remaining available vehicles
+    availableVehicles = buildAvailableVehicles();
+    if (availableVehicles.empty()) return;
+    
+    // assign medium priority incidents
+    std::cout << "\nMedium Severity:\n";
+    t1 = std::chrono::steady_clock::now();
+    std::vector<std::vector<double>> responseTimesMed = calculateResponseTimesPointToMany(availableVehicles, mediumSeverityIncidents, routeFunction);
+    t2 = std::chrono::steady_clock::now();
+    assignAvailableVehiclesToIncidents(availableVehicles, mediumSeverityIncidents, responseTimesMed);
+    t3 = std::chrono::steady_clock::now();
+
+    analyseAssignmentTimings(t1, t2, t3);
+    
+    // rebuild list of remaining available vehicles
+    availableVehicles = buildAvailableVehicles();
+    if (availableVehicles.empty()) return;
+    
+    // assign low priority incidents
+    std::cout << "\nLow Severity:\n";
+    t1 = std::chrono::steady_clock::now();
+    std::vector<std::vector<double>> responseTimesLow = calculateResponseTimesPointToMany(availableVehicles, lowSeverityIncidents, routeFunction);
     t2 = std::chrono::steady_clock::now();
     assignAvailableVehiclesToIncidents(availableVehicles, lowSeverityIncidents, responseTimesLow);
     t3 = std::chrono::steady_clock::now();

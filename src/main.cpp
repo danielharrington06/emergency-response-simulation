@@ -7,7 +7,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Emergency Response Simulation\n";
     
-    int result = runAssignmentBenchmarkPTP(argc, argv);
+    int result = runAssignmentBenchmarkPTM(argc, argv);
     
     if (result == 1) {
         return 1;

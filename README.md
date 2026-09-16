@@ -165,9 +165,40 @@ COMP0002-C-Coursework/
 ```
 
 ## Compile and Run
+
+Point to Point GPU Algorithm
 ```bash
 xcrun -sdk macosx metal -c \
-    metal/routing_one_to_one.metal \
+    metal/routing.metal \ #make sure this is corrected
+    -o bin/routing.air
+
+xcrun -sdk macosx metallib \
+    bin/routing.air \
+    -o bin/routing.metallib
+
+clang++ -std=c++17 \
+    src/main.cpp \
+    src/road_network.cpp \
+    src/router.cpp \
+    src/dispatch.cpp \
+    src/incident.cpp \
+    src/emergency_vehicle.cpp \
+    src/osm_loader.cpp \
+    src/scenario_generator.cpp \
+    src/assignment.cpp \
+    src/gpu_graph.cpp \
+    src/metal_router.mm \
+    src/benchmark_route.cpp \
+    src/benchmark_assignment.cpp \
+    -framework Metal \
+    -framework Foundation \
+    -o bin/main
+```
+
+Point to Many GPU Algorithm
+```bash
+xcrun -sdk macosx metal -c \
+    metal/routing.metal \ #make sure this is corrected
     -o bin/routing.air
 
 xcrun -sdk macosx metallib \
