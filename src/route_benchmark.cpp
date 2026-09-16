@@ -178,7 +178,7 @@ int run_benchmark(int argc, char *argv[]) {
                 routes[i].source,
                 routes[i].target
             );
-            std::cout << "\tNum Nodes: " << route.nodesVisited << '\n';
+            std::cout << "\tNum Nodes: " << route.nodes.size() << '\n';
                     
             std::cout << "  GPU: "
                     << gpuTime
