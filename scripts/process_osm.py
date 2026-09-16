@@ -42,9 +42,8 @@ def parse_speed(value):
     try:
         speed = float(value)
         if math.isfinite(speed):
-            return DEFAULT_SPEED_MPH
-        
-        return speed
+            return speed
+        return DEFAULT_SPEED_MPH
     except ValueError:
         return DEFAULT_SPEED_MPH
 
