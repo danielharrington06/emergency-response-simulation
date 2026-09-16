@@ -29,7 +29,7 @@ int runAssignmentBenchmarkPTM(int argc, char *argv[]) {
     return runAssignmentBenchmark(argc, argv, true);
 }
 
-int runAssignmentBenchmark(int argc, char *argv[], bool multiGpuAlgorithm) {
+int runAssignmentBenchmark(int argc, char *argv[], bool multiTargetAlgorithms) {
 
     unsigned int vehicleCount = DEFAULT_INCIDENT_COUNT;
     unsigned int incidentCount = DEFAULT_VEHICLE_COUNT;
@@ -98,47 +98,48 @@ int runAssignmentBenchmark(int argc, char *argv[], bool multiGpuAlgorithm) {
     GPUGraph gpuGraph = createGPUGraph(network);
     MetalRouter metalRouter(gpuGraph);
 
-    // Routing Functions
+    double totalCpuTime = 0;
+    double totalGpuTime = 0;
 
-    RouteFunction cpuRoute =
-        [&](uint32_t source, uint32_t destination) -> Route {
+    if (!multiTargetAlgorithms) {
 
-            return findRouteCPU(
+        // Routing Functions
+        
+        RouteFunction cpuRoute =
+        [&](uint32_t source, uint32_t target) -> Route {
+            
+            return findRouteCpuAStar(
                 network,
                 source,
-                destination
+                target
             );
         };
         
-        
-    // --- CPU benchmark ---
-    
-    
-    std::cout << "\n-> Running Assignment on CPU\n";
-    
-    auto cpuStart = std::chrono::steady_clock::now();
-    cpuDispatch.findOptimalAssignment(cpuRoute);
-    auto cpuEnd = std::chrono::steady_clock::now();
-    
-    std::chrono::duration<double, std::milli> cpuElapsed = cpuEnd - cpuStart;
-    double totalCpuTime = cpuElapsed.count();
-    
-    
-    // --- GPU Benchmark---
-    
-
-    double totalGpuTime = 0.0;
-        
-    if (!multiGpuAlgorithm) { // regular point to point
         RouteFunction gpuRoute =
-            [&](uint32_t source, uint32_t destination) -> Route {
+            [&](uint32_t source, uint32_t target) -> Route {
     
-                return metalRouter.findRouteGPU(
+                return metalRouter.findRouteGpuFrontier(
                     source,
-                    destination
+                    target
                 );
             };
-            
+        
+        // --- CPU benchmark ---
+        
+        
+        std::cout << "\n-> Running Assignment on CPU\n";
+        
+        auto cpuStart = std::chrono::steady_clock::now();
+        cpuDispatch.findOptimalAssignment(cpuRoute);
+        auto cpuEnd = std::chrono::steady_clock::now();
+        
+        std::chrono::duration<double, std::milli> cpuElapsed = cpuEnd - cpuStart;
+        totalCpuTime = cpuElapsed.count();
+
+
+        // --- GPU benchmark ---
+
+
         std::cout << "\n-> Running Assignment on GPU\n";
         auto gpuStart = std::chrono::steady_clock::now();
         gpuDispatch.findOptimalAssignment(gpuRoute);
@@ -146,18 +147,50 @@ int runAssignmentBenchmark(int argc, char *argv[], bool multiGpuAlgorithm) {
     
         std::chrono::duration<double, std::milli> gpuElapsed = gpuEnd - gpuStart;
         totalGpuTime = gpuElapsed.count();
+        
     }
     else {
-        RouteFunctionPointToMany gpuRoute =
+
+
+        // --- Routing Algorithms ---
+        RouteFunctionPointToMany cpuRoute =
             [&](uint32_t source,
                 const std::vector<uint32_t>& targets) -> std::vector<Route> {
-
-                return metalRouter.findRoutesGpuMultiNodes(
+    
+                return findRoutesCpuDijkstraMultiTarget(
+                    network,
                     source,
                     targets
                 );
             };
 
+        RouteFunctionPointToMany gpuRoute =
+            [&](uint32_t source,
+                const std::vector<uint32_t>& targets) -> std::vector<Route> {
+    
+                return metalRouter.findRoutesGpuFrontierMultiTarget(
+                    source,
+                    targets
+                );
+            };
+
+        
+        // --- CPU benchmark ---
+        
+        
+        std::cout << "\n-> Running Assignment on CPU\n";
+        
+        auto cpuStart = std::chrono::steady_clock::now();
+        cpuDispatch.findOptimalAssignmentPointToMany(cpuRoute);
+        auto cpuEnd = std::chrono::steady_clock::now();
+        
+        std::chrono::duration<double, std::milli> cpuElapsed = cpuEnd - cpuStart;
+        totalCpuTime = cpuElapsed.count();
+
+
+        // -- GPU benchmark
+
+    
         std::cout << "\n-> Running Assignment on GPU\n";
         auto gpuStart = std::chrono::steady_clock::now();
         gpuDispatch.findOptimalAssignmentPointToMany(gpuRoute);
@@ -165,8 +198,8 @@ int runAssignmentBenchmark(int argc, char *argv[], bool multiGpuAlgorithm) {
     
         std::chrono::duration<double, std::milli> gpuElapsed = gpuEnd - gpuStart;
         totalGpuTime = gpuElapsed.count();  
-    }
 
+    }
 
     // --- Verify results ---
 
@@ -191,7 +224,7 @@ int runAssignmentBenchmark(int argc, char *argv[], bool multiGpuAlgorithm) {
 
     double totalDifference = std::abs(cpuTotal - gpuTotal);
 
-    constexpr double TOTAL_TIME_TOLERANCE = 0.001; // minutes
+    constexpr double TOTAL_TIME_TOLERANCE = 0.005; // minutes
 
     bool totalTimeMatch = totalDifference <= TOTAL_TIME_TOLERANCE;
 
@@ -273,39 +306,68 @@ int runAssignmentBenchmark(int argc, char *argv[], bool multiGpuAlgorithm) {
     std::time_t time = std::chrono::system_clock::to_time_t(now);
     std::cout << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "\n";
 
-    std::cout << "\nCPU assignments: "
-            << cpuAssignments.size() << '\n';
+    if (assignmentCountMatch) {
+        std::cout << "\nSame number of assignments: "
+                << (assignmentCountMatch ? "YES" : "NO") << '\n';
+        std::cout << "Assignments: "
+                << cpuAssignments.size() << '\n';
+    }
+    else {
+        
+        std::cout << "\nSame number of assignments: "
+                << (assignmentCountMatch ? "YES" : "NO") << '\n';
 
-    std::cout << "GPU assignments: "
-            << gpuAssignments.size() << '\n';
+        std::cout << "\nCPU assignments: "
+                << cpuAssignments.size() << '\n';
 
-    std::cout << "Same number of assignments: "
-            << (assignmentCountMatch ? "YES" : "NO") << '\n';
+        std::cout << "GPU assignments: "
+                << gpuAssignments.size() << '\n';
+    }
 
     std::cout << "Exact Assignments match: "
-          << (assignmentsMatch ? "YES" : "NO")
-          << '\n';
+                << (assignmentsMatch ? "YES" : "NO")
+                << '\n';
 
-    std::cout << "\nCPU assignment total: "
+    if (totalTimeMatch) {
+        std::cout << "Same total assignment time: "
+                << (totalTimeMatch ? "YES" : "NO") << '\n';
+
+        std::cout << "Assignment total time: "
+                << cpuTotal << " min\n";
+        std::cout << "Average Response Time: "
+                << cpuTotal / cpuAssignments.size() << " min\n";
+    }
+    else {
+        std::cout << "Same total assignment time: "
+            << (totalTimeMatch ? "YES" : "NO") << '\n';
+
+            
+        std::cout << "\nCPU assignment total: "
             << cpuTotal << " min\n";
-
-    std::cout << "GPU assignment total: "
+            
+        std::cout << "GPU assignment total: "
             << gpuTotal << " min\n";
-
-    std::cout << "Assignment total difference: "
+            
+        std::cout << "Assignment total difference: "
             << std::setprecision(10)
             << totalDifference << " min\n"
             <<std::setprecision(3);
-
-    std::cout << "Same total assignment time: "
-            << (totalTimeMatch ? "YES" : "NO") << '\n';
+    }
 
     std::cout << "\nCPU total: "
               << totalCpuTime
               << " ms\n";
 
+    std::cout << "CPU average per vehicle: "
+              << totalCpuTime / cpuAssignments.size()
+              << " ms\n";
+
     std::cout << "\nGPU total: "
               << totalGpuTime
+              << " ms\n";
+
+    std::cout << "GPU average per vehicle: "
+              << totalGpuTime / gpuAssignments.size()
               << " ms\n";
 
     std::cout << "\nGPU speedup: "

@@ -91,7 +91,7 @@ int runRouteBenchmark(int argc, char *argv[]) {
 
     for (const RouteNodePair& routePair : routes) {
 
-        Route route = findRouteCPU(
+        Route route = findRouteCpuAStar(
             network,
             routePair.source,
             routePair.target
@@ -121,7 +121,7 @@ int runRouteBenchmark(int argc, char *argv[]) {
 
     for (const RouteNodePair& routePair : routes) {
 
-        Route route = metalRouter.findRouteGPU(
+        Route route = metalRouter.findRouteGpuFrontier(
             routePair.source,
             routePair.target
         );
@@ -170,7 +170,7 @@ int runRouteBenchmark(int argc, char *argv[]) {
                     << cpuTime
                     << " mins\n";
                     
-            Route route = findRouteCPU(
+            Route route = findRouteCpuAStar(
                 network,
                 routes[i].source,
                 routes[i].target

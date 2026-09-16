@@ -265,7 +265,7 @@ void Dispatch::findOptimalAssignment(RouteFunction routeFunction) { // assigns v
     if (availableVehicles.empty()) return;
     
     // assign high priority incidents
-    std::cout << "\nHigh Severity:\n";
+    std::cout << "High Severity:\n";
     auto t1 = std::chrono::steady_clock::now();
     std::vector<std::vector<double>> responseTimesHigh = calculateResponseTimes(availableVehicles, highSeverityIncidents, routeFunction);
     auto t2 = std::chrono::steady_clock::now();
@@ -279,7 +279,7 @@ void Dispatch::findOptimalAssignment(RouteFunction routeFunction) { // assigns v
     if (availableVehicles.empty()) return;
     
     // assign medium priority incidents
-    std::cout << "\nMedium Severity:\n";
+    std::cout << "Medium Severity:\n";
     t1 = std::chrono::steady_clock::now();
     std::vector<std::vector<double>> responseTimesMed = calculateResponseTimes(availableVehicles, mediumSeverityIncidents, routeFunction);
     t2 = std::chrono::steady_clock::now();
@@ -293,7 +293,7 @@ void Dispatch::findOptimalAssignment(RouteFunction routeFunction) { // assigns v
     if (availableVehicles.empty()) return;
     
     // assign low priority incidents
-    std::cout << "\nLow Severity:\n";
+    std::cout << "Low Severity:\n";
     t1 = std::chrono::steady_clock::now();
     std::vector<std::vector<double>> responseTimesLow = calculateResponseTimes(availableVehicles, lowSeverityIncidents, routeFunction);
     t2 = std::chrono::steady_clock::now();
@@ -337,7 +337,7 @@ void Dispatch::findOptimalAssignmentPointToMany(RouteFunctionPointToMany routeFu
     if (availableVehicles.empty()) return;
     
     // assign high priority incidents
-    std::cout << "\nHigh Severity:\n";
+    std::cout << "High Severity:\n";
     auto t1 = std::chrono::steady_clock::now();
     std::vector<std::vector<double>> responseTimesHigh = calculateResponseTimesPointToMany(availableVehicles, highSeverityIncidents, routeFunction);
     auto t2 = std::chrono::steady_clock::now();
@@ -351,7 +351,7 @@ void Dispatch::findOptimalAssignmentPointToMany(RouteFunctionPointToMany routeFu
     if (availableVehicles.empty()) return;
     
     // assign medium priority incidents
-    std::cout << "\nMedium Severity:\n";
+    std::cout << "Medium Severity:\n";
     t1 = std::chrono::steady_clock::now();
     std::vector<std::vector<double>> responseTimesMed = calculateResponseTimesPointToMany(availableVehicles, mediumSeverityIncidents, routeFunction);
     t2 = std::chrono::steady_clock::now();
@@ -365,7 +365,7 @@ void Dispatch::findOptimalAssignmentPointToMany(RouteFunctionPointToMany routeFu
     if (availableVehicles.empty()) return;
     
     // assign low priority incidents
-    std::cout << "\nLow Severity:\n";
+    std::cout << "Low Severity:\n";
     t1 = std::chrono::steady_clock::now();
     std::vector<std::vector<double>> responseTimesLow = calculateResponseTimesPointToMany(availableVehicles, lowSeverityIncidents, routeFunction);
     t2 = std::chrono::steady_clock::now();

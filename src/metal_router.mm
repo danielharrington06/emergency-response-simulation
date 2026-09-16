@@ -190,7 +190,7 @@ double MetalRouter::calculateStraightlineDistance(std::uint32_t sourceNode, std:
     return distance;
 }
 
-Route MetalRouter::findRouteGPU(std::uint32_t sourceNode, std::uint32_t targetNode) {
+Route MetalRouter::findRouteGpuFrontier(std::uint32_t sourceNode, std::uint32_t targetNode) {
     const GPUGraph& graph = state->graph;
 
     const std::size_t nodeCount = graph.nodeOffsets.size() - 1;
@@ -409,7 +409,7 @@ Route MetalRouter::findRouteGPU(std::uint32_t sourceNode, std::uint32_t targetNo
 }
 
 
-std::vector<Route> MetalRouter::findRoutesGpuMultiNodes(std::uint32_t sourceNode, const std::vector<std::uint32_t>& targetNodes) {
+std::vector<Route> MetalRouter::findRoutesGpuFrontierMultiTarget(std::uint32_t sourceNode, const std::vector<std::uint32_t>& targetNodes) {
     const GPUGraph& graph = state->graph;
 
     const std::size_t nodeCount = graph.nodeOffsets.size() - 1;

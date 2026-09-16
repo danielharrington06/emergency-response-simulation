@@ -52,7 +52,11 @@ $$iterations = min(MAX\_ITERATIONS, \ 50.25 \times distance + 708.74)$$
 ## Benchmarking
 To give reliable results, benchmarking was carried out using a fixed seed.
 
+PTP = Point to Point, an algorithm which calculates the time from a point to another point, so if it has to compute from a point to many points, will perform a series of PTP computations.
+PTM = Point to Many, an algorithm which calculates the time from a point to many other points, for efficiency as this only has to be run once.
+
 ### Route Benchmarking Results
+Compares CPU PTP A* against GPU PTP Frontier.
 ```
 Proportionate Max Iterations
 ========== Benchmark ==========
@@ -73,29 +77,28 @@ GPU speedup: 1.570x
 ```
 
 ### Assignment Benchmarking Results
-Initial assignment benchmarking was carried out where when calculating the response times matrix, both the CPU and GPU used their respective routing algorithms.
+Compares CPU PTM Dijkstra against GPU PTM Frontier.
 ```
 ========== Benchmark ==========
 Task: Route Benchmark
-2026-09-16 17:30:08
-Vehicles: 120
-Incidents: 120
+Vehicles: 100
+Incidents: 100
+2026-09-16 23:36:17
 
-CPU assignments: 118
-GPU assignments: 118
 Same number of assignments: YES
-Exact Assignments match: NO
-
-CPU assignment total: 952.145 min
-GPU assignment total: 952.144 min
-Assignment total difference: 0.0000617241 min
+Assignments: 97
+Exact Assignments match: YES
 Same total assignment time: YES
+Assignment total time: 840.059 min
+Average Response Time: 8.660 min
 
-CPU total: 88468.957 ms
+CPU total: 19745.739 ms
+CPU average per vehicle: 203.564 ms
 
-GPU total: 58573.203 ms
+GPU total: 5236.616 ms
+GPU average per vehicle: 53.986 ms
 
-GPU speedup: 1.510x
+GPU speedup: 3.771x
 ================================
 ```
 
@@ -169,7 +172,7 @@ COMP0002-C-Coursework/
 Point to Point GPU Algorithm
 ```bash
 xcrun -sdk macosx metal -c \
-    metal/routing.metal \ #make sure this is corrected
+    metal/routing_point_to_point.metal \ #make sure this is corrected
     -o bin/routing.air
 
 xcrun -sdk macosx metallib \
@@ -179,7 +182,7 @@ xcrun -sdk macosx metallib \
 clang++ -std=c++17 \
     src/main.cpp \
     src/road_network.cpp \
-    src/router.cpp \
+    src/cpu_router.cpp \
     src/dispatch.cpp \
     src/incident.cpp \
     src/emergency_vehicle.cpp \
@@ -198,7 +201,7 @@ clang++ -std=c++17 \
 Point to Many GPU Algorithm
 ```bash
 xcrun -sdk macosx metal -c \
-    metal/routing.metal \ #make sure this is corrected
+    metal/routing_point_to_many.metal \
     -o bin/routing.air
 
 xcrun -sdk macosx metallib \
@@ -208,7 +211,7 @@ xcrun -sdk macosx metallib \
 clang++ -std=c++17 \
     src/main.cpp \
     src/road_network.cpp \
-    src/router.cpp \
+    src/cpu_router.cpp \
     src/dispatch.cpp \
     src/incident.cpp \
     src/emergency_vehicle.cpp \
