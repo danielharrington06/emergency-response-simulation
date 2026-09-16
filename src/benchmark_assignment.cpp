@@ -20,7 +20,7 @@ const unsigned int INCIDENT_SEED = 72849;
 const unsigned int DEFAULT_INCIDENT_COUNT = 10;
 const unsigned int DEFAULT_VEHICLE_COUNT = 10;
 
-int runAssignmentBenchmark(int argc, char *argv[]) {
+int runAssignmentBenchmarkPTP(int argc, char *argv[]) {
 
     unsigned int vehicleCount = DEFAULT_INCIDENT_COUNT;
     unsigned int incidentCount = DEFAULT_VEHICLE_COUNT;

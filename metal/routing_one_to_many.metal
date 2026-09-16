@@ -77,21 +77,27 @@ kernel void prepare_dispatch(
 
     device uint* dispatchArguments [[buffer(3)]],
 
-    constant uint& targetNode [[buffer(4)]],
-    constant uint& threadsPerThreadgroup [[buffer(5)]],
+    device const uint* targetNodes [[buffer(4)]],
+    constant uint& targetCount [[buffer(5)]],
+    constant uint& threadsPerThreadgroup [[buffer(6)]],
 
-    device uint* currentFrontierCount [[buffer(6)]]
+    device uint* currentFrontierCount [[buffer(7)]]
 ) {
     uint frontierCount = atomic_load_explicit(&nextFrontierCount[0], memory_order_relaxed);
     currentFrontierCount[0] = frontierCount;
 
     uint minTime = atomic_load_explicit(&nextFrontierMinTime[0], memory_order_relaxed);
-    uint targetTime = atomic_load_explicit(&travelTimes[targetNode], memory_order_relaxed);
+    uint maxTargetTime = 0;
+
+    for (uint i = 0; i < targetCount; ++i) {
+        uint targetNode = targetNodes[i];
+        uint targetTime = atomic_load_explicit(&travelTimes[targetNode], memory_order_relaxed);
+        maxTargetTime = max(maxTargetTime, targetTime);
+    }
 
     uint threadgroups = 0;
 
-    if (frontierCount > 0 && targetTime > minTime) {
-
+    if (frontierCount > 0 && maxTargetTime > minTime) {
         threadgroups = (frontierCount + threadsPerThreadgroup - 1) / threadsPerThreadgroup;
     }
 

@@ -129,7 +129,7 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<ui
     return responseTimes;
 }
 
-void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction) {
+void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, std::vector<std::vector<double>> responseTimes) {
     // previously used exhuastive search but this was factorial time efficiency, so had to replace with ...
     //.. with hungarian assignment algorithm in assignment.cpp
 
@@ -138,27 +138,7 @@ void Dispatch::assignAvailableVehiclesToIncidents(std::vector<uint32_t> givenVeh
         return;
     }
 
-    auto routeStart = std::chrono::steady_clock::now();
-    std::vector<std::vector<double>> responseTimes = calculateResponseTimes(givenVehicles, givenIncidents, routeFunction);
-    auto routeEnd = std::chrono::steady_clock::now();
-
-    auto assignmentStart = std::chrono::steady_clock::now();
     std::vector<Assignment> assignments = findOptimalAssignmentHungarian(responseTimes);
-    auto assignmentEnd = std::chrono::steady_clock::now();
-
-    std::chrono::duration<double, std::milli> routeElapsed =
-    routeEnd - routeStart;
-
-    std::chrono::duration<double, std::milli> assignmentElapsed =
-        assignmentEnd - assignmentStart;
-
-    std::cout << "  Route calculations: "
-            << routeElapsed.count()
-            << " ms\n";
-
-    std::cout << "  Hungarian assignment: "
-            << assignmentElapsed.count()
-            << " ms\n";
 
     for (const Assignment& assignment : assignments) {
         uint32_t vehicleId = givenVehicles.at(assignment.vehicleIndex);
@@ -186,6 +166,20 @@ std::vector<uint32_t> Dispatch::buildAvailableVehicles() { // gets a vector of t
     }
     return availableVehicles;
 }
+
+void analyseAssignmentTimings(std::chrono::steady_clock::time_point t1, std::chrono::steady_clock::time_point t2, std::chrono::steady_clock::time_point t3) {
+    std::chrono::duration<double, std::milli> routeElapsed = t2 - t1;
+    std::chrono::duration<double, std::milli> assignmentElapsed = t3 - t2;
+
+    std::cout << "  Route calculations: "
+            << routeElapsed.count()
+            << " ms\n";
+
+    std::cout << "  Hungarian assignment: "
+            << assignmentElapsed.count()
+            << " ms\n";
+}
+
 
 void Dispatch::findOptimalAssignment(RouteFunction routeFunction) { // assigns vehicles in priority order, so all high first, then medium, then low, minimising total response time in each section
 
@@ -222,7 +216,13 @@ void Dispatch::findOptimalAssignment(RouteFunction routeFunction) { // assigns v
     
     // assign high priority incidents
     std::cout << "\nHigh Severity:\n";
-    assignAvailableVehiclesToIncidents(availableVehicles, highSeverityIncidents, routeFunction);
+    auto t1 = std::chrono::steady_clock::now();
+    std::vector<std::vector<double>> responseTimesHigh = calculateResponseTimes(availableVehicles, highSeverityIncidents, routeFunction);
+    auto t2 = std::chrono::steady_clock::now();
+    assignAvailableVehiclesToIncidents(availableVehicles, highSeverityIncidents, responseTimesHigh);
+    auto t3 = std::chrono::steady_clock::now();
+
+    analyseAssignmentTimings(t1, t2, t3);
     
     // rebuild list of remaining available vehicles
     availableVehicles = buildAvailableVehicles();
@@ -230,7 +230,13 @@ void Dispatch::findOptimalAssignment(RouteFunction routeFunction) { // assigns v
     
     // assign medium priority incidents
     std::cout << "\nMedium Severity:\n";
-    assignAvailableVehiclesToIncidents(availableVehicles, mediumSeverityIncidents, routeFunction);
+    t1 = std::chrono::steady_clock::now();
+    std::vector<std::vector<double>> responseTimesMed = calculateResponseTimes(availableVehicles, mediumSeverityIncidents, routeFunction);
+    t2 = std::chrono::steady_clock::now();
+    assignAvailableVehiclesToIncidents(availableVehicles, mediumSeverityIncidents, responseTimesMed);
+    t3 = std::chrono::steady_clock::now();
+
+    analyseAssignmentTimings(t1, t2, t3);
     
     // rebuild list of remaining available vehicles
     availableVehicles = buildAvailableVehicles();
@@ -238,9 +244,14 @@ void Dispatch::findOptimalAssignment(RouteFunction routeFunction) { // assigns v
     
     // assign low priority incidents
     std::cout << "\nLow Severity:\n";
-    assignAvailableVehiclesToIncidents(availableVehicles, lowSeverityIncidents, routeFunction);
-}
+    t1 = std::chrono::steady_clock::now();
+    std::vector<std::vector<double>> responseTimesLow = calculateResponseTimes(availableVehicles, lowSeverityIncidents, routeFunction);
+    t2 = std::chrono::steady_clock::now();
+    assignAvailableVehiclesToIncidents(availableVehicles, lowSeverityIncidents, responseTimesLow);
+    t3 = std::chrono::steady_clock::now();
 
+    analyseAssignmentTimings(t1, t2, t3);
+}
 
 size_t Dispatch::incidentCount() const {
     return incidents.size();

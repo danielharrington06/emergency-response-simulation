@@ -25,7 +25,6 @@ private:
     std::unordered_map<uint32_t, DispatchAssignment> vehicleAssignments;
     RoadNetwork network;
 
-    void assignAvailableVehiclesToIncidents(std::vector<uint32_t> availableVehicles, std::vector<uint32_t> incidentsOfThisPriority, const std::vector<std::vector<double>>& responseTimes);
     std::vector<uint32_t> buildAvailableVehicles();
 
 public:
@@ -43,7 +42,7 @@ public:
     const std::unordered_map<uint32_t, DispatchAssignment>& getAssignments() const;
 
     std::vector<std::vector<double>> calculateResponseTimes(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction) const;
-    void assignAvailableVehiclesToIncidents(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction);
+    void assignAvailableVehiclesToIncidents(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, std::vector<std::vector<double>> responseTimes);
     void findOptimalAssignment(RouteFunction routeFunction);
 
     size_t incidentCount() const;

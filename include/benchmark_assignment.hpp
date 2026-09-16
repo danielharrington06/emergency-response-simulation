@@ -1,3 +1,4 @@
 #pragma once
 
-int runAssignmentBenchmark(int argc, char *argv[]);
+int runAssignmentBenchmarkPTP(int argc, char *argv[]);
+int runAssignmentBenchmarkPTM(int argc, char *argv[]);

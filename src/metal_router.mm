@@ -79,15 +79,13 @@ struct MetalRouter::MetalState {
             );
         }
 
-        id<MTLFunction> resetFunction =
-            [library newFunctionWithName:@"reset_improved"];
+        id<MTLFunction> resetFunction = [library newFunctionWithName:@"reset_improved"];
 
         if (resetFunction == nil) {
             throw std::runtime_error("Failed to find reset_improved kernel");
         }
 
-        resetPipeline =
-            [device newComputePipelineStateWithFunction:resetFunction error:nil];
+        resetPipeline = [device newComputePipelineStateWithFunction:resetFunction error:nil];
 
         if (resetPipeline == nil) {
             throw std::runtime_error("Failed to create reset pipeline");
@@ -105,8 +103,7 @@ struct MetalRouter::MetalState {
             throw std::runtime_error("Failed to create prepare pipeline");
         }
 
-        id<MTLFunction> routingStateResetFunction =
-            [library newFunctionWithName:@"reset_routing_state"];
+        id<MTLFunction> routingStateResetFunction = [library newFunctionWithName:@"reset_routing_state"];
 
         if (routingStateResetFunction == nil) {
             throw std::runtime_error(
@@ -114,10 +111,7 @@ struct MetalRouter::MetalState {
             );
         }
 
-        routingStateResetPipeline =
-            [device newComputePipelineStateWithFunction:
-                routingStateResetFunction
-                error:nil];
+        routingStateResetPipeline = [device newComputePipelineStateWithFunction: routingStateResetFunction error:nil];
 
         if (routingStateResetPipeline == nil) {
             throw std::runtime_error(
@@ -134,26 +128,22 @@ struct MetalRouter::MetalState {
             );
         }
 
-        nodeOffsetsBuffer =
-            [device newBufferWithBytes:graph.nodeOffsets.data()
+        nodeOffsetsBuffer = [device newBufferWithBytes:graph.nodeOffsets.data()
                             length:graph.nodeOffsets.size() *
                                    sizeof(std::uint32_t)
                            options:MTLResourceStorageModeShared];
 
-        edgeDestinationsBuffer =
-            [device newBufferWithBytes:graph.edgeDestinations.data()
+        edgeDestinationsBuffer = [device newBufferWithBytes:graph.edgeDestinations.data()
                             length:graph.edgeDestinations.size() *
                                    sizeof(std::uint32_t)
                            options:MTLResourceStorageModeShared];
 
-        edgeTravelTimesBuffer =
-            [device newBufferWithBytes:graph.edgeTravelTimes.data()
+        edgeTravelTimesBuffer = [device newBufferWithBytes:graph.edgeTravelTimes.data()
                             length:graph.edgeTravelTimes.size() *
                                    sizeof(float)
                            options:MTLResourceStorageModeShared];
         
-        dispatchArgumentsBuffer =
-            [device newBufferWithLength:
+        dispatchArgumentsBuffer = [device newBufferWithLength:
                 3 * sizeof(std::uint32_t)
                 options:MTLResourceStorageModeShared];
 
@@ -368,7 +358,6 @@ Route MetalRouter::findRouteGPU(std::uint32_t sourceNode, std::uint32_t targetNo
         [prepareEncoder setBytes:&threadsPerThreadgroup length:sizeof(threadsPerThreadgroup) atIndex:5];
         [prepareEncoder setBuffer:currentFrontierCountBuffer offset:0 atIndex:6];
 
-
         [prepareEncoder
             dispatchThreads:
                 MTLSizeMake(1, 1, 1)
@@ -420,19 +409,35 @@ Route MetalRouter::findRouteGPU(std::uint32_t sourceNode, std::uint32_t targetNo
 }
 
 
-std::vector<Route> MetalRouter::findRouteGPU(std::uint32_t sourceNode, const std::vector<std::uint32_t>& targetNodes) {
+std::vector<Route> MetalRouter::findRouteGPU_multiNodes(std::uint32_t sourceNode, const std::vector<std::uint32_t>& targetNodes) {
     const GPUGraph& graph = state->graph;
 
     const std::size_t nodeCount = graph.nodeOffsets.size() - 1;
 
-    if (sourceNode >= nodeCount || targetNode >= nodeCount) {
+    if (targetNodes.empty()) {
+        return {};
+    }
 
+    if (sourceNode >= nodeCount) {
         throw std::out_of_range(
-            "Source or target node is out of range"
+            "Source node is out of range"
         );
     }
 
+    for (std::uint32_t targetNode : targetNodes) {
+        if (targetNode >= nodeCount) {
+            throw std::out_of_range(
+                "Target node is out of range"
+            );
+        }
+    }
+
     const std::uint32_t INF = std::numeric_limits<std::uint32_t>::max();
+
+    id<MTLBuffer> targetNodesBuffer = [state->device
+        newBufferWithBytes:targetNodes.data()
+        length:targetNodes.size() * sizeof(std::uint32_t)
+        options:MTLResourceStorageModeShared];
 
     id<MTLBuffer> frontierBuffer =
         [state->device newBufferWithLength:nodeCount * sizeof(std::uint32_t)
@@ -485,7 +490,8 @@ std::vector<Route> MetalRouter::findRouteGPU(std::uint32_t sourceNode, const std
                         length:sizeof(std::uint32_t)
                     options:MTLResourceStorageModeShared];
 
-    if (frontierBuffer == nil ||
+    if (targetNodesBuffer == nil ||
+        frontierBuffer == nil ||
         nextFrontierBuffer == nil ||
         travelTimesBuffer == nil ||
         improvedBuffer == nil ||
@@ -505,8 +511,13 @@ std::vector<Route> MetalRouter::findRouteGPU(std::uint32_t sourceNode, const std
 
     id<MTLCommandBuffer> commandBuffer = [state->commandQueue commandBuffer];
 
-    double distance = calculateStraightlineDistance(sourceNode, targetNode);
-    std::uint32_t iterations = std::min(MAX_ITERATIONS, static_cast<std::uint32_t>(std::round(50.25 * distance + 708.74)));
+    double maxDistance = 0.0;
+    for (std::uint32_t targetNode : targetNodes) {
+        double distance = calculateStraightlineDistance(sourceNode, targetNode);
+        maxDistance = std::max(maxDistance, distance);
+    }
+
+    std::uint32_t iterations = std::min( MAX_ITERATIONS, static_cast<std::uint32_t>(std::round(50.25 * maxDistance + 708.74)));
 
     for (std::uint32_t iteration = 0; iteration < iterations; ++iteration) {
 
@@ -583,11 +594,12 @@ std::vector<Route> MetalRouter::findRouteGPU(std::uint32_t sourceNode, const std
         [prepareEncoder setBuffer:nextFrontierMinTimeBuffer offset:0 atIndex:1];
         [prepareEncoder setBuffer:travelTimesBuffer offset:0 atIndex:2];
         [prepareEncoder setBuffer:state->dispatchArgumentsBuffer offset:0 atIndex:3];
-        [prepareEncoder setBytes:&targetNode length:sizeof(targetNode) atIndex:4];
+        [prepareEncoder setBuffer:targetNodesBuffer offset:0 atIndex:4];
+        const std::uint32_t targetCount = static_cast<std::uint32_t>(targetNodes.size());
+        [prepareEncoder setBytes:&targetCount length:sizeof(targetCount) atIndex:5];
         const std::uint32_t threadsPerThreadgroup = static_cast<std::uint32_t>(state->threadsPerThreadgroup);
-        [prepareEncoder setBytes:&threadsPerThreadgroup length:sizeof(threadsPerThreadgroup) atIndex:5];
-        [prepareEncoder setBuffer:currentFrontierCountBuffer offset:0 atIndex:6];
-
+        [prepareEncoder setBytes:&threadsPerThreadgroup length:sizeof(threadsPerThreadgroup) atIndex:6];
+        [prepareEncoder setBuffer:currentFrontierCountBuffer offset:0 atIndex:7];
 
         [prepareEncoder
             dispatchThreads:
@@ -624,17 +636,25 @@ std::vector<Route> MetalRouter::findRouteGPU(std::uint32_t sourceNode, const std
 
     const std::uint32_t* results = static_cast<const std::uint32_t*>(travelTimesBuffer.contents);
 
-    Route route;
-    route.start = sourceNode;
-    route.destination = targetNode;
-    if (results[targetNode] == INF) {
-        route.status = RouteStatus::NoRoute;
-        route.totalTravelTime = std::numeric_limits<float>::infinity();
-    }
-    else {
-        route.status = RouteStatus::Found;
-        route.totalTravelTime = static_cast<float>(results[targetNode]) / (1000.0f*60.0f);
+    std::vector<Route> routes;
+    routes.reserve(targetNodes.size());
+
+    for (std::uint32_t targetNode : targetNodes) {
+        Route route;
+        route.start = sourceNode;
+        route.destination = targetNode;
+
+        if (results[targetNode] == INF) {
+            route.status = RouteStatus::NoRoute;
+            route.totalTravelTime = std::numeric_limits<float>::infinity();
+        }
+        else {
+            route.status = RouteStatus::Found;
+            route.totalTravelTime = static_cast<float>(results[targetNode]) / (1000.0f * 60.0f);
+        }
+
+        routes.push_back(route);
     }
 
-    return route;
+    return routes;
 }
