@@ -37,23 +37,43 @@ To give reliable results, benchmarking should be carried out on the same seed.
 ```vbnet
 COMP0002-C-Coursework/
 │
-├── src/
-│   ├── dispatch.cpp
-│   ├── main.cpp
-│   ├── road_network.cpp
-│   ├── router.cpp
-│   ├── test_dispatch.cpp
-│   └── test_network.cpp
-│
 ├── include/
+│   ├── assignment.hpp
 │   ├── dispatch.hpp
-│   ├── emergency_vehicle.hpp
+│   ├── emergency-incident.hpp
+│   ├── gpu_graph.hpp
 │   ├── incident.hpp
+│   ├── metal_router.hpp
+│   ├── osm_loader.hpp
 │   ├── road_network.hpp
+│   ├── route_benchmark.hpp
 │   ├── route.hpp
 │   ├── router.hpp
-│   ├── test_dispatch.hpp
-│   └── test_network.hpp
+│   └── scenario_generator.hpp
+│
+├── metal/
+│   └── routing.metal
+│
+├── scripts/
+│   ├── config.exmaple.py
+│   ├── config.py
+│   ├── process_facilities.py
+│   ├── process_osm.py
+│   └── show_map.py
+│
+├── src/
+│   ├── assignment.cpp
+│   ├── dispatch.cpp
+│   ├── emergency-incident.cpp
+│   ├── gpu_graph.cpp
+│   ├── incident.cpp
+│   ├── main.cpp
+│   ├── metal_router.mm
+│   ├── osm_loader.cpp
+│   ├── road_network.cpp
+│   ├── route_benchmark.cpp
+│   ├── router.cpp
+│   └── scenario_generator.cpp
 │
 └── README.md
 ```
