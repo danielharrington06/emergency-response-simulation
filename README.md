@@ -21,16 +21,17 @@ OpenStreetMap is used for a real road network. I used a county near me in the UK
 
 `process_osm.py` produces the road network, represented by `nodes.csv` and `edges.csv`. `process_facilities.py` produced the facilities in `facilities.csv`, storing data on hospitals, ambulance stations, fire stations and police stations.
 
-## Metal GPU Implementation
+## Metal GPU Implementation
 For the graph network to work efficiently on the GPU, it needs fixed length arrays with reliable offsets rather than ragged `<vector>` objects as in the `road_network` implementation. `gpu_graph.cpp` formats the graph through a CSR conversion, to setup for the Metal GPU code.
 
-GPU Performance Improvements and Findings
-- had kernel process next frontier (750->530ms)
+### GPU Performance Improvements and Findings
+- GPU kernel processing the next frontier (750->530ms)
 - establishing a safe global termination: made GPU 0.15x speedup
 - resetting flags through a kernel: made GPU 0.18x speedup
 - discovered that roughly 94% of the processing time is outside the GPU execution itself, so moved all the iterative steps onto the GPU by giving max iterations and a way to check if it could finish early
 - some routes were incorrect compared to the CPU, this was because they were not given enough iterations
-- also discovered the processed osm data was entirely 30mph speed limits, so corrected this which gave the CPU a big performance boost as the heuristic was stronger
+- also discovered the processed osm data was entirely 30mph speed limits, so corrected this which gave the CPU a big performance boost as the heuristic was stronger, so GPU speedup fell
+- changing MAX_ITERATIONS from 2000 to a max number of iterations proportionate to straightline distance between the source and target node(covering up to 99th percentile) gave 1.15x -> 1.5x GPU speedup improvement which works for my map but might change for dnser or sparser maps. $iterations = min(MAX_ITERATIONS, 50.25 \times distance + 708.74)$
 
 ## Benchmarking
 To give reliable results, benchmarking should be carried out on the same seed.
