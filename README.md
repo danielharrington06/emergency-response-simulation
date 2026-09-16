@@ -137,7 +137,8 @@ COMP0002-C-Coursework/
 │   └── scenario_generator.hpp
 │
 ├── metal/
-│   └── routing.metal
+│   ├── routing_one_to_many.metal
+│   └── routing_one_to_one.metal
 │
 ├── scripts/
 │   ├── config.exmaple.py
@@ -166,7 +167,7 @@ COMP0002-C-Coursework/
 ## Compile and Run
 ```bash
 xcrun -sdk macosx metal -c \
-    metal/routing.metal \
+    metal/routing_one_to_one.metal \
     -o bin/routing.air
 
 xcrun -sdk macosx metallib \
