@@ -74,6 +74,10 @@ const Incident& Dispatch::getIncident(uint32_t id) const {
     return incidents.at(id);
 }
 
+const std::unordered_map<uint32_t, DispatchAssignment>& Dispatch::getAssignments() const {
+    return vehicleAssignments;
+}
+
 std::vector<std::vector<double>> Dispatch::calculateResponseTimes(std::vector<uint32_t> givenVehicles, std::vector<uint32_t> givenIncidents, const RouteFunction& routeFunction) const {
     std::vector<std::vector<double>> responseTimes(givenVehicles.size(), std::vector<double>(givenIncidents.size()));
 
