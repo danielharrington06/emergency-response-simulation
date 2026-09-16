@@ -5,8 +5,7 @@
 #include "../include/gpu_graph.hpp"
 #include "../include/metal_router.hpp"
 #include "../include/route.hpp"
-#include "../include/router.hpp"
-#include "../include/router.hpp"
+#include "../include/cpu_router.hpp"
 
 #include <iostream>
 #include <random>

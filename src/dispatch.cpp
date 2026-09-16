@@ -1,8 +1,7 @@
 #include "../include/dispatch.hpp"
-#include "../include/router.hpp"
 #include "../include/incident.hpp"
 #include "../include/assignment.hpp"
-#include "../include/router.hpp"
+#include "../include/cpu_router.hpp"
 
 #include <iostream>
 #include <string>
@@ -160,7 +159,7 @@ std::vector<std::vector<double>> Dispatch::calculateResponseTimesPointToMany(std
 
         // just one route functino call with this method
         std::vector<Route> routes = routeFunction(vehicle.location, targetNodes);
-        
+
         if (routes.size() != targetNodes.size()) {
             throw std::runtime_error(
                 "Point-to-many route function returned an unexpected number of routes"
