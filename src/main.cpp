@@ -13,19 +13,12 @@ struct RoutePair {
     unsigned int target;
 };
 
-const unsigned int BENCHMARK_SEED = 12345;
-const unsigned int DEFAULT_BENCHMARK_ROUTE_COUNT = 10;
-
 int main(int argc, char *argv[]) {
-    unsigned int benchmark_route_count = DEFAULT_BENCHMARK_ROUTE_COUNT;
-
-    if (argc == 2) {
-        benchmark_route_count = std::stoul(argv[1]);
-    }
+    
 
     std::cout << "Emergency Response Simulation\n";
     
-    int result =run_benchmark(benchmark_route_count);
+    int result = run_benchmark(argc, argv);
     
     if (result == 1) {
         return 1;
