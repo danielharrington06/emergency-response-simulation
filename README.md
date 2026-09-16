@@ -36,6 +36,25 @@ For the graph network to work efficiently on the GPU, it needs fixed length arra
 ## Benchmarking
 To give reliable results, benchmarking should be carried out on the same seed.
 
+### Route (point a to point b) Benchmarking Results
+```
+Proportionate Max Iterations
+========== Benchmark ==========
+2026-09-16 15:01:53
+Routes: 1000
+Successful routes: 979
+Matching CPU/GPU results: 1000/1000
+
+CPU total: 27616.464 ms
+CPU average: 27.616 ms/route
+
+GPU total: 17584.946 ms
+GPU average: 17.585 ms/route
+
+GPU speedup: 1.570x
+================================
+```
+
 ## Project Structure
 ```vbnet
 COMP0002-C-Coursework/
