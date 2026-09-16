@@ -18,4 +18,5 @@ public:
 private:
     struct MetalState;
     MetalState* state;
+    double calculateStraightlineDistance(std::uint32_t sourceNode, std::uint32_t targetNode);
 };

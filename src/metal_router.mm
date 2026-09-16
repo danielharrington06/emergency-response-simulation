@@ -173,14 +173,38 @@ MetalRouter::~MetalRouter() {
     delete state;
 }
 
+double MetalRouter::calculateStraightlineDistance(std::uint32_t sourceNode, std::uint32_t targetNode) {
+    const GPUGraph& graph = state->graph;
+    constexpr double PI = 3.14159265358979323846;
+    constexpr double EARTH_RADIUS_MILES = 3958.7613;
+
+    float latitude1 = graph.nodeLatitudes.at(sourceNode) * PI / 180.0;
+
+    double latitude2 = graph.nodeLatitudes.at(targetNode) * PI / 180.0;
+
+    double latitudeDifference = (graph.nodeLatitudes.at(targetNode) - graph.nodeLatitudes.at(sourceNode)) * PI / 180.0;
+
+    double longitudeDifference = (graph.nodeLongitudes.at(targetNode) - graph.nodeLongitudes.at(sourceNode)) * PI / 180.0;
+
+    double a =
+        std::sin(latitudeDifference / 2.0)
+        * std::sin(latitudeDifference / 2.0)
+        +
+        std::cos(latitude1)
+        * std::cos(latitude2)
+        * std::sin(longitudeDifference / 2.0)
+        * std::sin(longitudeDifference / 2.0);
+
+    double distance = 2.0 * EARTH_RADIUS_MILES * std::asin(std::sqrt(a));
+    return distance;
+}
+
 float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
     const GPUGraph& graph = state->graph;
 
-    const std::size_t nodeCount =
-        graph.nodeOffsets.size() - 1;
+    const std::size_t nodeCount = graph.nodeOffsets.size() - 1;
 
-    if (sourceNode >= nodeCount ||
-        targetNode >= nodeCount) {
+    if (sourceNode >= nodeCount || targetNode >= nodeCount) {
 
         throw std::out_of_range(
             "Source or target node is out of range"
@@ -260,8 +284,8 @@ float MetalRouter::route(std::uint32_t sourceNode, std::uint32_t targetNode) {
 
     id<MTLCommandBuffer> commandBuffer = [state->commandQueue commandBuffer];
 
-    double distance = ;
-    std::uint32_t iterations = round(min(MAX_ITERATIONS, 50.25 * distance + 708.74));
+    double distance = calculateStraightlineDistance(sourceNode, targetNode);
+    std::uint32_t iterations = std::min(MAX_ITERATIONS, static_cast<std::uint32_t>(std::round(50.25 * distance + 708.74)));
 
     for (std::uint32_t iteration = 0; iteration < iterations; ++iteration) {
 
