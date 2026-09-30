@@ -8,17 +8,13 @@
 #include "../include/cpu_router.hpp"
 #include "../include/dispatch.hpp"
 #include "../include/scenario_generator.hpp"
+#include "../include/simulation_config.hpp"
 
 #include <iostream>
 #include <random>
 #include <iomanip>
 #include <vector>
 #include <chrono>
-
-const unsigned int VEHICLE_SEED = 54321;
-const unsigned int INCIDENT_SEED = 72849;
-const unsigned int DEFAULT_INCIDENT_COUNT = 10;
-const unsigned int DEFAULT_VEHICLE_COUNT = 10;
 
 int runAssignmentBenchmark(int argc, char *argv[], bool multiGpuAlgorithm);
 
@@ -30,9 +26,10 @@ int runAssignmentBenchmarkPTM(int argc, char *argv[]) {
 }
 
 int runAssignmentBenchmark(int argc, char *argv[], bool multiTargetAlgorithms) {
+    auto& config = SimulationConfig::getInstance();
 
-    unsigned int vehicleCount = DEFAULT_INCIDENT_COUNT;
-    unsigned int incidentCount = DEFAULT_VEHICLE_COUNT;
+    unsigned int vehicleCount = config.defaultNumVehicles;
+    unsigned int incidentCount = config.defaultNumIncidents;
 
     if (argc == 2) {
         vehicleCount = std::stoul(argv[1]);
@@ -66,8 +63,8 @@ int runAssignmentBenchmark(int argc, char *argv[], bool multiTargetAlgorithms) {
         static_cast<unsigned int>(network.nodeCount() - 1)
     );
 
-    std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, vehicleCount, VEHICLE_SEED);
-    std::vector<Incident> incidents = generateRandomIncidents(network, incidentCount, INCIDENT_SEED);
+    std::vector<EmergencyVehicle> vehicles = generateRandomVehicles(network, vehicleCount, config.vehicleSeed);
+    std::vector<Incident> incidents = generateRandomIncidents(network, incidentCount, config.incidentSeed);
 
     Dispatch cpuDispatch(network);
     cpuDispatch.addVehicles(vehicles);
@@ -82,7 +79,7 @@ int runAssignmentBenchmark(int argc, char *argv[], bool multiTargetAlgorithms) {
               << " benchmark vehicles\n";
 
     std::cout << "Seed: "
-              << VEHICLE_SEED
+              << config.vehicleSeed
               << '\n';
 
     std::cout << "\n-> Generated "
@@ -90,7 +87,7 @@ int runAssignmentBenchmark(int argc, char *argv[], bool multiTargetAlgorithms) {
               << " benchmark incidents\n";
 
     std::cout << "Seed: "
-              << INCIDENT_SEED
+              << config.incidentSeed
               << '\n';
 
     // Create GPU graph and router - not timed

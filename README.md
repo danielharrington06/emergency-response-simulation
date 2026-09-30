@@ -222,6 +222,7 @@ clang++ -std=c++17 \
     src/metal_router.mm \
     src/benchmark_route.cpp \
     src/benchmark_assignment.cpp \
+    src/simulation_config.cpp \
     -framework Metal \
     -framework Foundation \
     -o bin/main
